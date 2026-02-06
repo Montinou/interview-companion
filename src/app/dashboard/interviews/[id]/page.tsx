@@ -4,8 +4,12 @@ import { db } from '@/lib/db';
 import { interviews } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
+import { ArrowLeft, User, Calendar, Clock, Mail, Phone, FileText, Play, CheckCircle } from 'lucide-react';
 import { updateInterviewStatus } from '@/app/actions/interviews';
 import { LiveInsights } from '@/components/LiveInsights';
+import { StatsCard } from '@/components/StatsCard';
+import { Button } from '@/components/ui-button';
+import { cn } from '@/lib/utils';
 
 export default async function InterviewDetailPage({
   params,
@@ -31,112 +35,156 @@ export default async function InterviewDetailPage({
     notFound();
   }
 
+  const duration = interview.startedAt
+    ? Math.floor((new Date().getTime() - new Date(interview.startedAt).getTime()) / 1000)
+    : 0;
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const statusConfig = {
+    scheduled: { color: 'yellow', icon: Calendar, label: 'Scheduled' },
+    live: { color: 'blue', icon: Play, label: 'Live' },
+    completed: { color: 'green', icon: CheckCircle, label: 'Completed' },
+    cancelled: { color: 'gray', icon: Clock, label: 'Cancelled' },
+  };
+
+  const currentStatus = statusConfig[interview.status as keyof typeof statusConfig] || statusConfig.scheduled;
+
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
+      <div className="max-w-[1600px] mx-auto p-6 lg:p-8 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <Link
             href="/dashboard/interviews"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Back to Interviews
+            <ArrowLeft className="h-4 w-4" />
+            Back to Interviews
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Candidate Info */}
-          <div className="lg:col-span-1 space-y-6">
-            <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">👤 Candidate</h2>
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* Left Sidebar - Candidate Info */}
+          <div className="xl:col-span-3 space-y-6">
+            {/* Candidate Card */}
+            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Candidate</h3>
+                  <p className="text-xs text-muted-foreground">Interview #{interview.id}</p>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Name</p>
+                  <p className="text-xs text-muted-foreground mb-1">Full Name</p>
                   <p className="font-medium">{interview.candidate.name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{interview.candidate.email}</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Mail className="h-3 w-3" />
+                    Email
+                  </div>
+                  <p className="text-sm font-medium break-all">{interview.candidate.email}</p>
                 </div>
                 {interview.candidate.phone && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Phone</p>
-                    <p className="font-medium">{interview.candidate.phone}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <Phone className="h-3 w-3" />
+                      Phone
+                    </div>
+                    <p className="text-sm font-medium">{interview.candidate.phone}</p>
                   </div>
                 )}
                 {interview.candidate.jiraTicket && (
                   <div>
-                    <p className="text-sm text-muted-foreground">Jira Ticket</p>
-                    <p className="font-medium">{interview.candidate.jiraTicket}</p>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <FileText className="h-3 w-3" />
+                      Jira Ticket
+                    </div>
+                    <p className="text-sm font-mono font-medium">{interview.candidate.jiraTicket}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">📅 Status</h2>
+            {/* Status & Actions */}
+            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
+              <div className="flex items-center gap-3 pb-4 border-b">
+                <div className={cn(
+                  'rounded-lg p-2.5',
+                  `bg-${currentStatus.color}-500/10`
+                )}>
+                  <currentStatus.icon className={cn('h-5 w-5', `text-${currentStatus.color}-600`)} />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Status</h3>
+                  <p className="text-xs text-muted-foreground">Interview state</p>
+                </div>
+              </div>
+
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm text-muted-foreground">Current Status</p>
-                  <span
-                    className={`inline-flex mt-1 px-3 py-1 rounded-full text-xs font-medium ${
-                      interview.status === 'completed'
-                        ? 'bg-green-500/10 text-green-500'
-                        : interview.status === 'live'
-                        ? 'bg-blue-500/10 text-blue-500'
-                        : interview.status === 'scheduled'
-                        ? 'bg-yellow-500/10 text-yellow-500'
-                        : 'bg-gray-500/10 text-gray-500'
-                    }`}
-                  >
-                    {interview.status}
+                  <p className="text-xs text-muted-foreground mb-2">Current Status</p>
+                  <span className={cn(
+                    'inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium',
+                    `bg-${currentStatus.color}-500/10 text-${currentStatus.color}-600 border border-${currentStatus.color}-500/20`
+                  )}>
+                    {currentStatus.label}
                   </span>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Created</p>
-                  <p className="font-medium">
-                    {new Date(interview.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                {interview.startedAt && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Started</p>
-                    <p className="font-medium">
-                      {new Date(interview.startedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-                {interview.completedAt && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Completed</p>
-                    <p className="font-medium">
-                      {new Date(interview.completedAt).toLocaleString()}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
 
-            <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">Interview Controls</h2>
-              <div className="space-y-3">
+                <div className="pt-2 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Created</span>
+                    <span className="font-medium">
+                      {new Date(interview.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {interview.startedAt && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Started</span>
+                      <span className="font-medium">
+                        {new Date(interview.startedAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  )}
+                  {interview.completedAt && (
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Completed</span>
+                      <span className="font-medium">
+                        {new Date(interview.completedAt).toLocaleTimeString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-4 space-y-2">
                 {interview.status === 'scheduled' && (
-                  <form action={updateInterviewStatus.bind(null, interview.id, 'live')}>
-                    <button
-                      type="submit"
-                      className="w-full px-6 py-3 rounded-lg bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
-                    >
-                      🔴 Start Interview
-                    </button>
+                  <form action={updateInterviewStatus.bind(null, interview.id, 'live')} className="w-full">
+                    <Button type="submit" className="w-full" size="lg">
+                      <Play className="h-4 w-4" />
+                      Start Interview
+                    </Button>
                   </form>
                 )}
                 {interview.status === 'live' && (
-                  <form action={updateInterviewStatus.bind(null, interview.id, 'completed')}>
-                    <button
-                      type="submit"
-                      className="w-full px-6 py-3 rounded-lg bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
-                    >
-                      ✅ Complete Interview
-                    </button>
+                  <form action={updateInterviewStatus.bind(null, interview.id, 'completed')} className="w-full">
+                    <Button type="submit" className="w-full" size="lg" variant="default">
+                      <CheckCircle className="h-4 w-4" />
+                      Complete Interview
+                    </Button>
                   </form>
                 )}
               </div>
@@ -144,8 +192,39 @@ export default async function InterviewDetailPage({
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="p-6 rounded-xl border bg-card">
+          <div className="xl:col-span-9 space-y-6">
+            {/* Stats Grid */}
+            {interview.status === 'live' && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <StatsCard
+                  icon={Clock}
+                  label="Duration"
+                  value={formatDuration(duration)}
+                  color="blue"
+                  delay={0}
+                />
+                <StatsCard
+                  icon={User}
+                  label="Candidate Speaking"
+                  value="65%"
+                  subtitle="Good balance"
+                  color="green"
+                  trend="up"
+                  delay={0.1}
+                />
+                <StatsCard
+                  icon={CheckCircle}
+                  label="Topics Covered"
+                  value="3/5"
+                  subtitle="On track"
+                  color="purple"
+                  delay={0.2}
+                />
+              </div>
+            )}
+
+            {/* Live Insights */}
+            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6">
               <LiveInsights interviewId={interview.id} />
             </div>
           </div>
