@@ -5,6 +5,7 @@ import { interviews } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { updateInterviewStatus } from '@/app/actions/interviews';
+import { LiveInsights } from '@/components/LiveInsights';
 
 export default async function InterviewDetailPage({
   params,
@@ -114,13 +115,10 @@ export default async function InterviewDetailPage({
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
             <div className="p-6 rounded-xl border bg-card">
               <h2 className="text-xl font-semibold mb-4">Interview Controls</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-3">
                 {interview.status === 'scheduled' && (
                   <form action={updateInterviewStatus.bind(null, interview.id, 'live')}>
                     <button
@@ -143,38 +141,12 @@ export default async function InterviewDetailPage({
                 )}
               </div>
             </div>
+          </div>
 
+          {/* Main Content */}
+          <div className="lg:col-span-2 space-y-6">
             <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">🎤 Transcription</h2>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="text-6xl mb-4">🔊</div>
-                <h3 className="text-lg font-semibold mb-2">Real-time transcription</h3>
-                <p className="text-muted-foreground">
-                  Coming in Etapa 4 - Pusher integration
-                </p>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">🤖 AI Insights</h2>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="text-6xl mb-4">💡</div>
-                <h3 className="text-lg font-semibold mb-2">Smart suggestions</h3>
-                <p className="text-muted-foreground">
-                  Coming in Etapa 5 - OpenAI integration
-                </p>
-              </div>
-            </div>
-
-            <div className="p-6 rounded-xl border bg-card">
-              <h2 className="text-xl font-semibold mb-4">📊 Scorecard</h2>
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <div className="text-6xl mb-4">🎯</div>
-                <h3 className="text-lg font-semibold mb-2">Live scoring</h3>
-                <p className="text-muted-foreground">
-                  Coming in Etapa 6 - Scorecard component
-                </p>
-              </div>
+              <LiveInsights interviewId={interview.id} />
             </div>
           </div>
         </div>
