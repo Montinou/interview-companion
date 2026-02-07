@@ -8,6 +8,13 @@
       "when": 1770456372974,
       "tag": "0000_blue_absorbing_man",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770507017419,
+      "tag": "0001_sturdy_skaar",
+      "breakpoints": true
     }
   ]
 }

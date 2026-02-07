@@ -65,8 +65,13 @@ export const scorecards = pgTable('scorecards', {
 export const aiInsights = pgTable('ai_insights', {
   id: serial('id').primaryKey(),
   interviewId: integer('interview_id').notNull().references(() => interviews.id, { onDelete: 'cascade' }),
-  type: varchar('type', { length: 50 }).notNull(), // question, red-flag, insight
+  type: varchar('type', { length: 50 }).notNull(), // 'red-flag' | 'green-flag' | 'suggestion' | 'note'
+  severity: varchar('severity', { length: 20 }), // 'warning' | 'info' | 'success'
   content: text('content').notNull(),
+  suggestion: text('suggestion'), // suggested follow-up question
+  topic: varchar('topic', { length: 100 }), // topic category
+  responseQuality: integer('response_quality'), // 1-10 rating
+  used: boolean('used').default(false), // for suggestions - was it used?
   timestamp: timestamp('timestamp').notNull().defaultNow(),
 });
 

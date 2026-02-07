@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights } from '@/lib/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +12,7 @@ export async function POST(
     const interviewId = parseInt(id);
     const body = await request.json();
 
-    const { type, content } = body;
+    const { type, content, severity, suggestion, topic, responseQuality } = body;
 
     if (!type || !content) {
       return NextResponse.json(
@@ -25,6 +26,10 @@ export async function POST(
       interviewId,
       type,
       content,
+      severity,
+      suggestion,
+      topic,
+      responseQuality,
     }).returning();
 
     return NextResponse.json(insight);
@@ -44,11 +49,27 @@ export async function GET(
   try {
     const { id } = await params;
     const interviewId = parseInt(id);
+    
+    // Get type filter from query params
+    const { searchParams } = new URL(request.url);
+    const typeFilter = searchParams.get('type');
 
-    const insights = await db.query.aiInsights.findMany({
-      where: (aiInsights, { eq }) => eq(aiInsights.interviewId, interviewId),
-      orderBy: (aiInsights, { asc }) => [asc(aiInsights.timestamp)],
-    });
+    let insights;
+    
+    if (typeFilter) {
+      insights = await db.query.aiInsights.findMany({
+        where: and(
+          eq(aiInsights.interviewId, interviewId),
+          eq(aiInsights.type, typeFilter)
+        ),
+        orderBy: [desc(aiInsights.timestamp)],
+      });
+    } else {
+      insights = await db.query.aiInsights.findMany({
+        where: eq(aiInsights.interviewId, interviewId),
+        orderBy: [desc(aiInsights.timestamp)],
+      });
+    }
 
     return NextResponse.json(insights);
   } catch (error) {
