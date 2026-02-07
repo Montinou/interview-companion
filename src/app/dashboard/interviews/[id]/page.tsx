@@ -46,13 +46,24 @@ export default async function InterviewDetailPage({
   };
 
   const statusConfig = {
-    scheduled: { color: 'yellow', icon: Calendar, label: 'Scheduled' },
-    live: { color: 'blue', icon: Play, label: 'Live' },
-    completed: { color: 'green', icon: CheckCircle, label: 'Completed' },
-    cancelled: { color: 'gray', icon: Clock, label: 'Cancelled' },
+    scheduled: { color: 'yellow', label: 'Scheduled' },
+    live: { color: 'blue', label: 'Live' },
+    completed: { color: 'green', label: 'Completed' },
+    cancelled: { color: 'gray', label: 'Cancelled' },
   };
 
   const currentStatus = statusConfig[interview.status as keyof typeof statusConfig] || statusConfig.scheduled;
+  
+  // Helper to render status icon based on status
+  const StatusIcon = ({ status, className }: { status: string; className?: string }) => {
+    switch (status) {
+      case 'scheduled': return <Calendar className={className} />;
+      case 'live': return <Play className={className} />;
+      case 'completed': return <CheckCircle className={className} />;
+      case 'cancelled': return <Clock className={className} />;
+      default: return <Calendar className={className} />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
@@ -124,7 +135,7 @@ export default async function InterviewDetailPage({
                   'rounded-lg p-2.5',
                   `bg-${currentStatus.color}-500/10`
                 )}>
-                  <currentStatus.icon className={cn('h-5 w-5', `text-${currentStatus.color}-600`)} />
+                  <StatusIcon status={interview.status} className={cn('h-5 w-5', `text-${currentStatus.color}-600`)} />
                 </div>
                 <div>
                   <h3 className="font-semibold">Status</h3>
@@ -197,14 +208,14 @@ export default async function InterviewDetailPage({
             {interview.status === 'live' && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <StatsCard
-                  icon={Clock}
+                  icon="clock"
                   label="Duration"
                   value={formatDuration(duration)}
                   color="blue"
                   delay={0}
                 />
                 <StatsCard
-                  icon={User}
+                  icon="user"
                   label="Candidate Speaking"
                   value="65%"
                   subtitle="Good balance"
@@ -213,7 +224,7 @@ export default async function InterviewDetailPage({
                   delay={0.1}
                 />
                 <StatsCard
-                  icon={CheckCircle}
+                  icon="check"
                   label="Topics Covered"
                   value="3/5"
                   subtitle="On track"

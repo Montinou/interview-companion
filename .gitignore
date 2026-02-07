@@ -4,3 +4,6 @@ node_modules
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+.env.production
+seed-interviews.mjs
+seed-interviews.ts

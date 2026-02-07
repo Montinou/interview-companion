@@ -1,11 +1,23 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import { Clock, User, CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Map of icon names to components - icons must be defined in client component
+const iconMap = {
+  clock: Clock,
+  user: User,
+  check: CheckCircle,
+  alert: AlertTriangle,
+  'trending-up': TrendingUp,
+  'trending-down': TrendingDown,
+} as const;
+
+type IconName = keyof typeof iconMap;
+
 interface StatsCardProps {
-  icon: LucideIcon;
+  icon: IconName;
   label: string;
   value: string | number;
   subtitle?: string;
@@ -23,7 +35,7 @@ const colorClasses = {
 };
 
 export function StatsCard({
-  icon: Icon,
+  icon,
   label,
   value,
   subtitle,
@@ -31,6 +43,8 @@ export function StatsCard({
   color = 'blue',
   delay = 0,
 }: StatsCardProps) {
+  const Icon = iconMap[icon];
+  
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
