@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -11,28 +11,33 @@ export async function GET(
     const { id } = await params;
     const interviewId = parseInt(id);
 
-    // Get counts by type
-    const insights = await db.query.aiInsights.findMany({
-      where: eq(aiInsights.interviewId, interviewId),
-    });
+    // Single query with SQL aggregation instead of fetching all rows
+    const [counts] = await db
+      .select({
+        redFlagCount: sql<number>`count(*) filter (where ${aiInsights.type} = 'red-flag')`.as('red_flag_count'),
+        greenFlagCount: sql<number>`count(*) filter (where ${aiInsights.type} = 'green-flag')`.as('green_flag_count'),
+        suggestionCount: sql<number>`count(*) filter (where ${aiInsights.type} = 'suggestion')`.as('suggestion_count'),
+        totalInsights: sql<number>`count(*)`.as('total_insights'),
+      })
+      .from(aiInsights)
+      .where(eq(aiInsights.interviewId, interviewId));
 
-    const redFlagCount = insights.filter(i => i.type === 'red-flag').length;
-    const greenFlagCount = insights.filter(i => i.type === 'green-flag').length;
-    const suggestionCount = insights.filter(i => i.type === 'suggestion').length;
-    
-    // Get unique topics
-    const topicsCovered = [...new Set(
-      insights
-        .filter(i => i.topic)
-        .map(i => i.topic as string)
-    )];
+    // Get unique topics (still need a separate query, but lightweight)
+    const topics = await db
+      .selectDistinct({ topic: aiInsights.topic })
+      .from(aiInsights)
+      .where(eq(aiInsights.interviewId, interviewId));
+
+    const topicsCovered = topics
+      .map(t => t.topic)
+      .filter((t): t is string => t !== null);
 
     return NextResponse.json({
-      redFlagCount,
-      greenFlagCount,
-      suggestionCount,
+      redFlagCount: Number(counts.redFlagCount),
+      greenFlagCount: Number(counts.greenFlagCount),
+      suggestionCount: Number(counts.suggestionCount),
       topicsCovered,
-      totalInsights: insights.length,
+      totalInsights: Number(counts.totalInsights),
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
