@@ -54,7 +54,7 @@ export default async function InterviewDetailPage({
         {/* Live Header */}
         <LiveHeader
           candidateName={interview.candidate.name}
-          position="QA Automation Engineer"
+          position={interview.candidate.jiraTicket ? `QA · ${interview.candidate.jiraTicket}` : 'QA Automation Engineer'}
           status={interview.status}
           startedAt={interview.startedAt?.toISOString() || null}
         />

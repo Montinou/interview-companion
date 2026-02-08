@@ -21,13 +21,28 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastIdRef = useRef<number | null>(null);
+  const initialLoadDone = useRef(false);
 
   const fetchTranscript = useCallback(async () => {
     try {
-      const res = await fetch(`/api/interviews/${interviewId}/transcript`);
+      const afterId = initialLoadDone.current ? lastIdRef.current : null;
+      const url = afterId
+        ? `/api/interviews/${interviewId}/transcript?after=${afterId}`
+        : `/api/interviews/${interviewId}/transcript`;
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        setTranscript(data);
+        const entries: TranscriptEntry[] = data.entries || data;
+        if (entries.length > 0) {
+          lastIdRef.current = entries[entries.length - 1].id;
+        }
+        if (afterId && Array.isArray(entries)) {
+          setTranscript(prev => [...prev, ...entries]);
+        } else {
+          setTranscript(entries);
+        }
+        initialLoadDone.current = true;
       }
     } catch (error) {
       console.error('Error fetching transcript:', error);

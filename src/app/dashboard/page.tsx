@@ -2,12 +2,43 @@ import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ClipboardList, Mic, Sparkles, TrendingUp, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { db } from '@/lib/db';
+import { interviews, aiInsights, users } from '@/lib/db/schema';
+import { eq, sql } from 'drizzle-orm';
 
 export default async function DashboardPage() {
   const user = await currentUser();
   
   if (!user) {
     redirect('/sign-in');
+  }
+
+  // Fetch real stats
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.clerkId, user.id),
+  });
+
+  let totalInterviews = 0;
+  let completedToday = 0;
+  let totalInsights = 0;
+
+  if (dbUser) {
+    const [interviewStats] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(interviews)
+      .where(eq(interviews.interviewerId, dbUser.id));
+    totalInterviews = Number(interviewStats.count);
+
+    const [todayStats] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(interviews)
+      .where(sql`${interviews.interviewerId} = ${dbUser.id} AND ${interviews.status} = 'completed'`);
+    completedToday = Number(todayStats.count);
+
+    const [insightStats] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(aiInsights);
+    totalInsights = Number(insightStats.count);
   }
 
   const features = [
@@ -164,15 +195,15 @@ export default async function DashboardPage() {
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-xl border bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
-            <div className="text-3xl font-bold text-blue-600 mb-1">0</div>
+            <div className="text-3xl font-bold text-blue-600 mb-1">{totalInterviews}</div>
             <div className="text-sm text-muted-foreground">Total Interviews</div>
           </div>
           <div className="rounded-xl border bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-600">
-            <div className="text-3xl font-bold text-green-600 mb-1">0</div>
-            <div className="text-sm text-muted-foreground">Completed Today</div>
+            <div className="text-3xl font-bold text-green-600 mb-1">{completedToday}</div>
+            <div className="text-sm text-muted-foreground">Completed</div>
           </div>
           <div className="rounded-xl border bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-700">
-            <div className="text-3xl font-bold text-purple-600 mb-1">0</div>
+            <div className="text-3xl font-bold text-purple-600 mb-1">{totalInsights}</div>
             <div className="text-sm text-muted-foreground">AI Insights Generated</div>
           </div>
         </div>
