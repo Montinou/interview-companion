@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
           severity?: string;
         }) => ({
           interviewId,
-          type: insight.type.replace('_', '-'), // red_flag → red-flag
+          type: insight.type.replaceAll('_', '-'), // red_flag → red-flag
           content: insight.content,
           suggestion: insight.suggestion || null,
           topic: insight.topic || haikuDecision.topic || null,
@@ -169,14 +169,19 @@ export async function POST(request: NextRequest) {
       result.savedInsights = insightsToSave.length;
     }
 
-    // 7. If Haiku has a quick_note worth saving (even without escalation)
-    if (haikuDecision.quick_note && haikuDecision.severity !== 'none') {
+    // 7. Save Haiku quick_note ONLY if high severity and it escalated
+    //    (avoid flooding DB with trivial notes like "candidate said hello")
+    if (
+      haikuDecision.quick_note &&
+      haikuDecision.severity === 'high' &&
+      !haikuDecision.escalate // only save note if Sonnet didn't already cover it
+    ) {
       await db.insert(aiInsights).values({
         interviewId,
         type: 'note',
         content: haikuDecision.quick_note,
         topic: haikuDecision.topic || null,
-        severity: haikuDecision.severity === 'high' ? 'warning' : 'info',
+        severity: 'warning',
       });
       result.savedInsights = (result.savedInsights as number) + 1;
     }

@@ -85,6 +85,8 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
 
     if (!isLive) return;
 
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
     // SSE for live updates
     const eventSource = new EventSource(`/api/interviews/${interviewId}/stream`);
 
@@ -97,11 +99,14 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
 
     eventSource.onerror = () => {
       eventSource.close();
-      const pollInterval = setInterval(fetchInsights, 5000);
-      return () => clearInterval(pollInterval);
+      // Fallback to polling
+      pollInterval = setInterval(fetchInsights, 5000);
     };
 
-    return () => eventSource.close();
+    return () => {
+      eventSource.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [interviewId, isLive, fetchInsights]);
 
   const formatTime = (timestamp: string) => {

@@ -54,6 +54,8 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
 
     if (!isLive) return;
 
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
     // SSE for live updates
     const eventSource = new EventSource(`/api/interviews/${interviewId}/stream`);
 
@@ -67,11 +69,13 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
     eventSource.onerror = () => {
       eventSource.close();
       // Fallback to polling
-      const pollInterval = setInterval(fetchSuggestions, 5000);
-      return () => clearInterval(pollInterval);
+      pollInterval = setInterval(fetchSuggestions, 5000);
     };
 
-    return () => eventSource.close();
+    return () => {
+      eventSource.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
   }, [interviewId, isLive, fetchSuggestions]);
 
   const formatTime = (timestamp: string) => {

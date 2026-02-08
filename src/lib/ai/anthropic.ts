@@ -50,8 +50,7 @@ export async function callAnthropic(options: CallOptions): Promise<{
 
   if (thinking) {
     body.thinking = thinking;
-    // When thinking is enabled, max_tokens must include thinking budget
-    body.max_tokens = thinking.budget_tokens + (maxTokens || 1024);
+    // max_tokens is for output text only; thinking budget is separate
   }
 
   const response = await fetch(`${ANTHROPIC_BASE_URL}/messages`, {
