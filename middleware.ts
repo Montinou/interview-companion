@@ -5,7 +5,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
   '/api/webhooks(.*)',
-  '/api/analyze',        // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/analyze',            // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/interviews/active',  // Protected by INTERNAL_API_KEY, not Clerk
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
