@@ -1,201 +1,191 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights, transcripts } from '@/lib/db/schema';
+import { eq, desc } from 'drizzle-orm';
 import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
+import { callAnthropic, HAIKU, SONNET } from '@/lib/ai/anthropic';
+import {
+  HAIKU_SYSTEM,
+  SONNET_SYSTEM,
+  buildHaikuUserMessage,
+  buildSonnetUserMessage,
+} from '@/lib/ai/prompts';
 
-// AI Gateway for Gemini Flash
-const AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1/chat/completions';
-const AI_GATEWAY_KEY = process.env.AI_GATEWAY_KEY;
-
-// Interview guide context for the AI
-const INTERVIEW_CONTEXT = `
-Sos un asistente de entrevistas de QA para Distillery. Tu rol es analizar respuestas de candidatos y detectar:
-
-## Red Flags (respuestas flojas)
-- Asume que testing tiene la culpa de bugs en producción
-- No entiende el "para qué" de la automatización (solo dice "para testear más rápido")
-- Dice que 100% de cobertura automatizada "sí, se puede" sin mencionar ROI
-- Solo quiere "scriptear a ciegas", no le interesa el negocio
-- Actitud defensiva o poco colaborativa
-- Habla mal de todos sus empleadores anteriores
-
-## Green Flags (respuestas maduras)
-- Pregunta "¿para qué?" antes de "¿cómo?"
-- Habla de ROI, balance, priorización
-- Menciona colaboración con devs/PM
-- Reconoce lo que no sabe
-- Tiene visión macro del proceso de testing
-- Experiencia con CI/CD, Page Objects, frameworks
-
-## Las 3 Preguntas Críticas
-1. "100% de cobertura automatizada" → Respuesta madura menciona ROI, limitaciones, balance
-2. "Bugs en producción a pesar de testing" → Respuesta madura analiza causa raíz, no culpa al testing
-3. "Para qué sirve la automatización" → Respuesta madura: depende del proyecto, regresión, CI/CD, feedback
-
-Respondé en JSON con este formato:
-{
-  "hasSuggestion": true/false,
-  "suggestion": "pregunta de seguimiento sugerida" | null,
-  "redFlag": "descripción del red flag detectado" | null,
-  "greenFlag": "descripción del green flag detectado" | null,
-  "note": "observación adicional" | null
-}
-`;
-
-interface AnalyzeRequest {
+interface IngestRequest {
   interviewId: number;
-  triggerReason: string;
-  triggerContext: string;
-  recentTranscript: string;
-  candidateInfo: {
-    name: string;
-    position?: string;
-    experience?: string;
-  };
-  stats?: {
-    duration: number;
-    redFlagCount: number;
-    greenFlagCount: number;
-    currentTopic?: string;
-  };
+  text: string;
+  speaker?: string; // 'interviewer' | 'candidate' | 'unknown'
+  candidateName: string;
+  position?: string;
+  durationMinutes?: number;
 }
 
 export async function POST(request: NextRequest) {
-  // Machine-to-machine auth (tier1 → server)
+  // Machine-to-machine auth
   if (!validateApiKey(request)) {
     return unauthorizedResponse('Invalid or missing API key');
   }
 
   try {
-    const body: AnalyzeRequest = await request.json();
-    const { 
-      interviewId, 
-      triggerReason, 
-      triggerContext, 
-      recentTranscript, 
-      candidateInfo,
-      stats 
+    const body: IngestRequest = await request.json();
+    const {
+      interviewId,
+      text,
+      speaker = 'unknown',
+      candidateName,
+      position = 'QA Automation Engineer',
+      durationMinutes = 0,
     } = body;
 
-    if (!interviewId || !triggerReason || !recentTranscript) {
+    if (!interviewId || !text || !candidateName) {
       return NextResponse.json(
-        { error: 'Missing required fields: interviewId, triggerReason, recentTranscript' },
+        { error: 'Missing required fields: interviewId, text, candidateName' },
         { status: 400 }
       );
     }
 
-    // Save transcript chunk to DB
+    // 1. Save transcript chunk to DB
     await db.insert(transcripts).values({
       interviewId,
-      text: recentTranscript,
-      speaker: 'candidate', // Default, can be improved with speaker detection
+      text,
+      speaker,
     });
 
-    // Build prompt for Gemini
-    const prompt = `
-${INTERVIEW_CONTEXT}
+    // 2. Get recent context (last 10 transcript entries)
+    const recentTranscripts = await db.query.transcripts.findMany({
+      where: eq(transcripts.interviewId, interviewId),
+      orderBy: [desc(transcripts.timestamp)],
+      limit: 10,
+    });
+    const recentContext = recentTranscripts
+      .reverse()
+      .map(t => `[${t.speaker}] ${t.text}`);
 
-## Candidato
-${candidateInfo.name}${candidateInfo.position ? ` - ${candidateInfo.position}` : ''}${candidateInfo.experience ? ` (${candidateInfo.experience})` : ''}
+    // 3. Get existing insight count
+    const existingInsights = await db.query.aiInsights.findMany({
+      where: eq(aiInsights.interviewId, interviewId),
+      orderBy: [desc(aiInsights.timestamp)],
+    });
 
-## Estado de la Entrevista
-- Duración: ${stats?.duration ? Math.floor(stats.duration / 60) + ' minutos' : 'N/A'}
-- Red flags detectados: ${stats?.redFlagCount ?? 0}
-- Green flags detectados: ${stats?.greenFlagCount ?? 0}
-- Tema actual: ${stats?.currentTopic ?? 'N/A'}
-
-## Razón del Análisis
-${triggerReason}: ${triggerContext}
-
-## Transcripción Reciente
-${recentTranscript}
-
-Analizá la transcripción y respondé en JSON.
-`;
-
-    // Call Gemini Flash via AI Gateway
-    const aiResponse = await fetch(AI_GATEWAY_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AI_GATEWAY_KEY}`,
-        'Content-Type': 'application/json',
+    // 4. HAIKU: Constant monitoring with thinking
+    const haikuResponse = await callAnthropic({
+      model: HAIKU,
+      system: HAIKU_SYSTEM,
+      messages: [
+        {
+          role: 'user',
+          content: buildHaikuUserMessage(text, {
+            candidateName,
+            position,
+            durationMinutes,
+            recentContext: recentContext.slice(-5),
+            insightsSoFar: existingInsights.length,
+          }),
+        },
+      ],
+      maxTokens: 512,
+      thinking: {
+        type: 'enabled',
+        budget_tokens: 2048,
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'user', content: prompt }
-        ],
-        response_format: { type: 'json_object' },
-      }),
     });
 
-    if (!aiResponse.ok) {
-      console.error('AI Gateway error:', await aiResponse.text());
-      return NextResponse.json(
-        { error: 'AI analysis failed' },
-        { status: 502 }
-      );
-    }
-
-    const aiData = await aiResponse.json();
-    const analysisText = aiData.choices?.[0]?.message?.content || '{}';
-    
-    let analysis;
+    let haikuDecision;
     try {
-      analysis = JSON.parse(analysisText);
+      haikuDecision = JSON.parse(haikuResponse.text);
     } catch {
-      analysis = { hasSuggestion: false, note: analysisText };
+      haikuDecision = { escalate: false, reason: 'Parse error', quick_note: null };
     }
 
-    // Save insights to DB
-    const insightsToSave = [];
+    const result: Record<string, unknown> = {
+      haiku: {
+        escalate: haikuDecision.escalate,
+        reason: haikuDecision.reason,
+        quick_note: haikuDecision.quick_note,
+        severity: haikuDecision.severity,
+        topic: haikuDecision.topic,
+        usage: haikuResponse.usage,
+      },
+      sonnet: null,
+      savedInsights: 0,
+    };
 
-    if (analysis.suggestion) {
-      insightsToSave.push({
-        interviewId,
-        type: 'suggestion',
-        content: analysis.suggestion,
+    // 5. If Haiku says escalate → SONNET deep analysis
+    if (haikuDecision.escalate) {
+      const sonnetResponse = await callAnthropic({
+        model: SONNET,
+        system: SONNET_SYSTEM,
+        messages: [
+          {
+            role: 'user',
+            content: buildSonnetUserMessage(text, {
+              candidateName,
+              position,
+              durationMinutes,
+              haikuReason: haikuDecision.reason,
+              recentTranscript: recentContext,
+              existingInsights: existingInsights.map(i => `[${i.type}] ${i.content}`),
+            }),
+          },
+        ],
+        maxTokens: 1024,
       });
+
+      let sonnetAnalysis;
+      try {
+        sonnetAnalysis = JSON.parse(sonnetResponse.text);
+      } catch {
+        sonnetAnalysis = { insights: [] };
+      }
+
+      // 6. Save Sonnet's insights to DB
+      const insightsToSave = (sonnetAnalysis.insights || []).map(
+        (insight: {
+          type: string;
+          content: string;
+          suggestion?: string;
+          topic?: string;
+          responseQuality?: number;
+          severity?: string;
+        }) => ({
+          interviewId,
+          type: insight.type.replace('_', '-'), // red_flag → red-flag
+          content: insight.content,
+          suggestion: insight.suggestion || null,
+          topic: insight.topic || haikuDecision.topic || null,
+          responseQuality: insight.responseQuality || null,
+          severity: insight.severity || 'info',
+        })
+      );
+
+      if (insightsToSave.length > 0) {
+        await db.insert(aiInsights).values(insightsToSave);
+      }
+
+      result.sonnet = {
+        insights: sonnetAnalysis.insights,
+        usage: sonnetResponse.usage,
+      };
+      result.savedInsights = insightsToSave.length;
     }
 
-    if (analysis.redFlag) {
-      insightsToSave.push({
-        interviewId,
-        type: 'red-flag',
-        content: analysis.redFlag,
-      });
-    }
-
-    if (analysis.greenFlag) {
-      insightsToSave.push({
-        interviewId,
-        type: 'green-flag',
-        content: analysis.greenFlag,
-      });
-    }
-
-    if (analysis.note) {
-      insightsToSave.push({
+    // 7. If Haiku has a quick_note worth saving (even without escalation)
+    if (haikuDecision.quick_note && haikuDecision.severity !== 'none') {
+      await db.insert(aiInsights).values({
         interviewId,
         type: 'note',
-        content: analysis.note,
+        content: haikuDecision.quick_note,
+        topic: haikuDecision.topic || null,
+        severity: haikuDecision.severity === 'high' ? 'warning' : 'info',
       });
+      result.savedInsights = (result.savedInsights as number) + 1;
     }
 
-    if (insightsToSave.length > 0) {
-      await db.insert(aiInsights).values(insightsToSave);
-    }
-
-    return NextResponse.json({
-      success: true,
-      analysis,
-      savedInsights: insightsToSave.length,
-    });
-
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Error in /api/analyze:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: String(error) },
       { status: 500 }
     );
   }
@@ -203,9 +193,10 @@ Analizá la transcripción y respondé en JSON.
 
 // Health check
 export async function GET() {
-  return NextResponse.json({ 
-    status: 'ok', 
+  return NextResponse.json({
+    status: 'ok',
     endpoint: '/api/analyze',
-    description: 'Tier 2 analysis endpoint for interview insights'
+    pipeline: 'Haiku (thinking) → Sonnet (deep analysis)',
+    description: 'Every transcript chunk goes through Haiku. Sonnet is called only when Haiku escalates.',
   });
 }
