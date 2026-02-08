@@ -11,6 +11,7 @@ import { SuggestionsPanel } from '@/components/interview/SuggestionsPanel';
 import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
 import { StatsPanel } from '@/components/interview/StatsPanel';
 import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
+import { ScorecardPanel } from '@/components/interview/ScorecardPanel';
 import { Button } from '@/components/ui-button';
 
 export default async function InterviewDetailPage({
@@ -188,6 +189,11 @@ export default async function InterviewDetailPage({
               interviewId={interview.id}
               isLive={isLive}
             />
+
+            {/* Scorecard (visible after interview starts) */}
+            {interview.status !== 'scheduled' && (
+              <ScorecardPanel interviewId={interview.id} />
+            )}
           </div>
 
           {/* Right Column - Suggestions (Most Important) */}
