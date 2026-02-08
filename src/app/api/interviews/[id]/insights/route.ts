@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Machine-to-machine auth required for writing insights
+  if (!validateApiKey(request)) {
+    return unauthorizedResponse('Invalid or missing API key');
+  }
+
   try {
     const { id } = await params;
     const interviewId = parseInt(id);

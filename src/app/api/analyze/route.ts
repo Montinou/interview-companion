@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights, transcripts } from '@/lib/db/schema';
+import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
 
 // AI Gateway for Gemini Flash
 const AI_GATEWAY_URL = 'https://ai-gateway.vercel.sh/v1/chat/completions';
@@ -60,6 +61,11 @@ interface AnalyzeRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Machine-to-machine auth (tier1 → server)
+  if (!validateApiKey(request)) {
+    return unauthorizedResponse('Invalid or missing API key');
+  }
+
   try {
     const body: AnalyzeRequest = await request.json();
     const { 
