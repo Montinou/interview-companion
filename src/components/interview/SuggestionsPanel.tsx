@@ -24,7 +24,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
 
   const fetchSuggestions = useCallback(async () => {
     try {
-      const res = await fetch(`/api/interviews/${interviewId}/insights?type=suggestion`);
+      const res = await fetch(`/api/interview-data?id=${interviewId}&type=insights&filter=suggestion`);
       if (res.ok) {
         const data = await res.json();
         setSuggestions(data);
@@ -38,7 +38,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
 
   const markAsUsed = async (id: number) => {
     try {
-      await fetch(`/api/interviews/${interviewId}/insights/${id}/used`, {
+      await fetch(`/api/interview-data?id=${interviewId}&type=used&insightId=${id}`, {
         method: 'POST',
       });
       setSuggestions(prev =>
@@ -54,27 +54,11 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
 
     if (!isLive) return;
 
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    // SSE for live updates
-    const eventSource = new EventSource(`/api/interviews/${interviewId}/stream`);
-
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'suggestion') {
-        setSuggestions(prev => [data, ...prev]);
-      }
-    };
-
-    eventSource.onerror = () => {
-      eventSource.close();
-      // Fallback to polling
-      pollInterval = setInterval(fetchSuggestions, 5000);
-    };
+    // Polling (SSE disabled due to Vercel dynamic route issue)
+    const pollInterval = setInterval(fetchSuggestions, 5000);
 
     return () => {
-      eventSource.close();
-      if (pollInterval) clearInterval(pollInterval);
+      clearInterval(pollInterval);
     };
   }, [interviewId, isLive, fetchSuggestions]);
 

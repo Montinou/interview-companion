@@ -28,8 +28,8 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
     try {
       const afterId = initialLoadDone.current ? lastIdRef.current : null;
       const url = afterId
-        ? `/api/interviews/${interviewId}/transcript?after=${afterId}`
-        : `/api/interviews/${interviewId}/transcript`;
+        ? `/api/interview-data?id=${interviewId}&type=transcript&after=${afterId}`
+        : `/api/interview-data?id=${interviewId}&type=transcript`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();

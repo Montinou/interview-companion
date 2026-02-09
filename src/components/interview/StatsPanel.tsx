@@ -44,7 +44,7 @@ export function StatsPanel({ interviewId, startedAt, status }: StatsPanelProps) 
   // Fetch stats
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch(`/api/interviews/${interviewId}/stats`);
+      const res = await fetch(`/api/interview-data?id=${interviewId}&type=stats`);
       if (res.ok) {
         const data = await res.json();
         setStats(data);

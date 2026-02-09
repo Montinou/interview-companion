@@ -65,8 +65,8 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
   const fetchInsights = useCallback(async () => {
     try {
       const url = filter 
-        ? `/api/interviews/${interviewId}/insights?type=${filter}`
-        : `/api/interviews/${interviewId}/insights`;
+        ? `/api/interview-data?id=${interviewId}&type=insights&filter=${filter}`
+        : `/api/interview-data?id=${interviewId}&type=insights`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
@@ -85,27 +85,11 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
 
     if (!isLive) return;
 
-    let pollInterval: ReturnType<typeof setInterval> | null = null;
-
-    // SSE for live updates
-    const eventSource = new EventSource(`/api/interviews/${interviewId}/stream`);
-
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type !== 'connected' && data.type !== 'suggestion') {
-        setInsights(prev => [data, ...prev]);
-      }
-    };
-
-    eventSource.onerror = () => {
-      eventSource.close();
-      // Fallback to polling
-      pollInterval = setInterval(fetchInsights, 5000);
-    };
+    // Polling (SSE disabled due to Vercel dynamic route issue)
+    const pollInterval = setInterval(fetchInsights, 5000);
 
     return () => {
-      eventSource.close();
-      if (pollInterval) clearInterval(pollInterval);
+      clearInterval(pollInterval);
     };
   }, [interviewId, isLive, fetchInsights]);
 

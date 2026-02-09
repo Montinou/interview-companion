@@ -66,7 +66,7 @@ export default async function InterviewsPage() {
             {userInterviews.map((interview) => (
               <Link
                 key={interview.id}
-                href={`/dashboard/interviews/${interview.id}`}
+                href={`/dashboard/interview?id=${interview.id}`}
                 className="p-6 rounded-xl border bg-card hover:bg-accent/50 transition-colors"
               >
                 <div className="flex items-center justify-between">

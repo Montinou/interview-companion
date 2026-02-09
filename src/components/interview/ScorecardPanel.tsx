@@ -52,7 +52,7 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/interviews/${interviewId}/scorecard`)
+    fetch(`/api/interview-data?id=${interviewId}&type=scorecard`)
       .then(res => res.json())
       .then(data => {
         if (data) setScorecard(data);
@@ -65,7 +65,7 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
     setSaving(true);
     setSaved(false);
     try {
-      await fetch(`/api/interviews/${interviewId}/scorecard`, {
+      await fetch(`/api/interview-data?id=${interviewId}&type=scorecard`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(scorecard),
