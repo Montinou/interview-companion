@@ -16,27 +16,51 @@ export async function GET() {
       orderBy: [asc(aiInsights.timestamp)],
     });
 
+    // Try to parse JSON content (may have markdown wrapping)
+    function tryParseJson(text: string | null): Record<string, any> | null {
+      if (!text) return null;
+      let raw = text.trim();
+      if (raw.startsWith('```json')) raw = raw.slice(7);
+      else if (raw.startsWith('```')) raw = raw.slice(3);
+      if (raw.endsWith('```')) raw = raw.slice(0, -3);
+      raw = raw.trim();
+      try { return JSON.parse(raw); } catch { return null; }
+    }
+
     // Map DB insight types to HUD format
     const insights = entries.map(e => {
       const isSuggestion = e.type === 'suggestion';
-      const isFlag = e.type === 'red-flag' || e.type === 'green-flag';
+
+      // First try: parse content as JSON (tier1/tier2 raw output)
+      const contentJson = tryParseJson(e.content);
 
       // Build a parsed-like object the HUD frontend expects
-      const parsed: Record<string, any> = {};
-      if (isSuggestion && e.suggestion) parsed.follow_up = e.suggestion;
-      if (e.topic) parsed.insight = e.topic;
-      if (e.type === 'red-flag') parsed.flag = e.content;
-      if (e.type === 'green-flag') {
-        parsed.green_flags = [e.content];
+      let parsed: Record<string, any> = {};
+
+      if (contentJson && (contentJson.follow_up !== undefined || contentJson.scorecard !== undefined || contentJson.contradictions !== undefined)) {
+        // This is a full tier1 or tier2 JSON response stored as content
+        parsed = contentJson;
+      } else {
+        // Individual typed insight
+        if (isSuggestion && e.content) parsed.follow_up = e.content;
+        if (e.topic) parsed.topic = e.topic;
+        if (e.type === 'red-flag') {
+          parsed.flag = e.content;
+          parsed.red_flags = [e.content];
+        }
+        if (e.type === 'green-flag') {
+          parsed.green_flags = [e.content];
+          parsed.insight = e.content;
+        }
       }
-      if (e.type === 'red-flag') {
-        parsed.red_flags = [e.content];
-      }
+
+      // Determine tier from topic or type
+      const tier = (e.topic?.includes('tier2') || e.type === 'red-flag' || e.type === 'green-flag') ? 2 : 1;
 
       return {
         time: e.timestamp.toISOString().substring(11, 19),
         timestamp: e.timestamp.getTime() / 1000,
-        tier: isSuggestion ? 1 : 2,
+        tier,
         trigger: e.content?.substring(0, 100) || '',
         analysis: JSON.stringify(parsed),
         parsed,
