@@ -111,37 +111,41 @@ export async function GET(request: NextRequest) {
       }
 
       case 'plan': {
-        // Interview planning: sections → topics → questions
-        const sections = await db.execute(sql`
-          SELECT s.id, s.name, s.description, s.duration_min, s.sort_order,
-            COALESCE(json_agg(
-              json_build_object(
-                'id', t.id, 'name', t.name, 'description', t.description,
-                'priority', t.priority, 'sort_order', t.sort_order,
-                'questions', (
-                  SELECT COALESCE(json_agg(
-                    json_build_object(
-                      'id', q.id, 'question', q.question, 'purpose', q.purpose,
-                      'expected_signals', q.expected_signals, 'follow_ups', q.follow_ups,
-                      'asked', q.asked, 'answer_quality', q.answer_quality, 'notes', q.notes
-                    ) ORDER BY q.sort_order
-                  ), '[]'::json)
-                  FROM interview_questions q WHERE q.topic_id = t.id
-                )
-              ) ORDER BY t.sort_order
-            ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as topics
-          FROM interview_sections s
-          LEFT JOIN interview_topics t ON t.section_id = s.id
-          WHERE s.interview_id = ${interviewId}
-          GROUP BY s.id, s.name, s.description, s.duration_min, s.sort_order
-          ORDER BY s.sort_order
+        // Interview planning: 3 simple queries instead of complex nested JSON
+        const sectionsResult = await db.execute(sql`
+          SELECT id, name, description, duration_min, sort_order
+          FROM interview_sections WHERE interview_id = ${interviewId}
+          ORDER BY sort_order
         `);
-        // Ensure topics is parsed JSON (some drivers return strings)
-        const parsed = (sections.rows || []).map((row: any) => ({
-          ...row,
-          topics: typeof row.topics === 'string' ? JSON.parse(row.topics) : row.topics,
+        const topicsResult = await db.execute(sql`
+          SELECT t.id, t.section_id, t.name, t.description, t.priority, t.sort_order
+          FROM interview_topics t
+          JOIN interview_sections s ON t.section_id = s.id
+          WHERE s.interview_id = ${interviewId}
+          ORDER BY t.sort_order
+        `);
+        const questionsResult = await db.execute(sql`
+          SELECT q.id, q.topic_id, q.question, q.purpose, q.expected_signals,
+                 q.follow_ups, q.asked, q.answer_quality, q.notes, q.sort_order
+          FROM interview_questions q
+          JOIN interview_topics t ON q.topic_id = t.id
+          JOIN interview_sections s ON t.section_id = s.id
+          WHERE s.interview_id = ${interviewId}
+          ORDER BY q.sort_order
+        `);
+
+        // Assemble nested structure in JS
+        const questions = questionsResult.rows || [];
+        const topics = (topicsResult.rows || []).map((t: any) => ({
+          ...t,
+          questions: questions.filter((q: any) => q.topic_id === t.id),
         }));
-        return NextResponse.json(parsed);
+        const sections = (sectionsResult.rows || []).map((s: any) => ({
+          ...s,
+          topics: topics.filter((t: any) => t.section_id === s.id),
+        }));
+
+        return NextResponse.json(sections);
       }
 
       default:
@@ -235,52 +239,27 @@ export async function POST(request: NextRequest) {
           topic: 'interviewer-note',
         });
 
-        // If AI enrichment requested, get context and respond
+        // AI enrichment: notes are picked up by OpenClaw analyzer agents
+        // For now, return a contextual hint based on recent data
         let aiResponse: string | undefined;
         if (requestAI) {
           try {
-            // Get recent transcript for context
-            const recentTranscripts = await db.select()
-              .from(transcripts)
-              .where(eq(transcripts.interviewId, interviewId))
-              .orderBy(desc(transcripts.id))
-              .limit(10);
-
             const recentInsights = await db.select()
               .from(aiInsights)
-              .where(eq(aiInsights.interviewId, interviewId))
+              .where(and(
+                eq(aiInsights.interviewId, interviewId),
+                sql`${aiInsights.type} != 'note'`
+              ))
               .orderBy(desc(aiInsights.id))
-              .limit(5);
+              .limit(3);
 
-            const context = [
-              recentTranscripts.length > 0
-                ? `Recent transcript:\n${recentTranscripts.reverse().map(t => `${t.speaker}: ${t.text}`).join('\n')}`
-                : 'No transcript yet.',
-              recentInsights.length > 0
-                ? `Recent insights:\n${recentInsights.map(i => `[${i.type}] ${i.content}`).join('\n')}`
-                : '',
-            ].filter(Boolean).join('\n\n');
-
-            // Use the OpenClaw analyze endpoint to get AI response
-            const apiKey = process.env.INTERNAL_API_KEY || '';
-            const analyzeRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-API-Key': apiKey,
-              },
-              body: JSON.stringify({
-                prompt: `You are an AI assistant helping an interviewer during a live QA Automation Engineer interview. The interviewer wrote this note/question: "${text}"\n\nContext:\n${context}\n\nRespond briefly (1-3 sentences) in the same language as the note. If it's a question, answer it. If it's an observation, enrich it with relevant follow-up suggestions. Be concise and actionable.`,
-              }),
-            });
-
-            if (analyzeRes.ok) {
-              const analyzeData = await analyzeRes.json();
-              aiResponse = analyzeData.response || analyzeData.text || undefined;
+            if (recentInsights.length > 0) {
+              aiResponse = `📌 Nota guardada. Contexto reciente: ${recentInsights.map(i => `[${i.type}] ${i.content?.substring(0, 80)}`).join(' | ')}`;
+            } else {
+              aiResponse = '📌 Nota guardada. La AI la procesará cuando haya más contexto de la entrevista.';
             }
-          } catch (aiError) {
-            console.error('AI enrichment failed:', aiError);
-            // Non-blocking — note is saved even if AI fails
+          } catch {
+            aiResponse = '📌 Nota guardada.';
           }
         }
 
