@@ -14,10 +14,14 @@ import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
 import { ScorecardPanel } from '@/components/interview/ScorecardPanel';
 import { Button } from '@/components/ui-button';
 
+// Force dynamic rendering — never cache this page
+export const dynamic = 'force-dynamic';
+
 /**
  * Interview detail page using query params instead of dynamic route.
  * Workaround for Vercel [id] route 404 issue.
  * URL: /dashboard/interview?id=4
+ * Version: 2
  */
 export default async function InterviewDetailPage({
   searchParams,
