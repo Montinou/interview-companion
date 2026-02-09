@@ -38,22 +38,31 @@ export function InterviewPlan({ interviewId }: InterviewPlanProps) {
   const [sections, setSections] = useState<Section[]>([]);
   const [expandedSection, setExpandedSection] = useState<number | null>(null);
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-  const fetchPlan = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/interview-data?id=${interviewId}&type=plan`);
-      if (res.ok) {
-        const data = await res.json();
-        setSections(data);
-        // Auto-expand first section
-        if (data.length > 0 && expandedSection === null) {
-          setExpandedSection(data[0].id);
+  useEffect(() => {
+    if (loaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/interview-data?id=${interviewId}&type=plan`, {
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          console.error('[InterviewPlan] fetch failed:', res.status, await res.text().catch(() => ''));
+          return;
         }
-      }
-    } catch (e) { console.error(e); }
-  }, [interviewId, expandedSection]);
-
-  useEffect(() => { fetchPlan(); }, [fetchPlan]);
+        const data = await res.json();
+        if (cancelled) return;
+        if (Array.isArray(data) && data.length > 0) {
+          setSections(data);
+          setExpandedSection(data[0].id);
+          setLoaded(true);
+        }
+      } catch (e) { console.error('[InterviewPlan] error:', e); }
+    })();
+    return () => { cancelled = true; };
+  }, [interviewId, loaded]);
 
   const markAsked = async (questionId: number) => {
     try {
