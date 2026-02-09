@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, Loader2, MessageSquare } from 'lucide-react';
 
 interface NotesPanelProps {
@@ -20,6 +20,39 @@ export function NotesPanel({ interviewId }: NotesPanelProps) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const lastAiResponseId = useRef(0);
+
+  // Poll for AI responses from the Mac-side note-responder
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/interview-data?id=${interviewId}&type=insights&filter=ai-response`);
+        if (res.ok) {
+          const responses = await res.json();
+          if (Array.isArray(responses) && responses.length > 0) {
+            const newResponses = responses.filter((r: any) => r.id > lastAiResponseId.current);
+            if (newResponses.length > 0) {
+              lastAiResponseId.current = Math.max(...newResponses.map((r: any) => r.id));
+              // Add AI responses to notes
+              for (const r of newResponses) {
+                setNotes(prev => {
+                  // Find a loading note to attach to, or add standalone
+                  const loadingIdx = prev.findIndex(n => n.loading);
+                  if (loadingIdx >= 0) {
+                    return prev.map((n, i) => i === loadingIdx ? { ...n, loading: false, aiResponse: r.content } : n);
+                  }
+                  return [...prev, { id: `ai-${r.id}`, text: '', timestamp: new Date(r.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), aiResponse: r.content }];
+                });
+              }
+              setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 100);
+            }
+          }
+        }
+      } catch { /* ignore poll errors */ }
+    };
+    const iv = setInterval(poll, 2000);
+    return () => clearInterval(iv);
+  }, [interviewId]);
 
   const sendNote = useCallback(async () => {
     const text = input.trim();
@@ -38,32 +71,20 @@ export function NotesPanel({ interviewId }: NotesPanelProps) {
     setSending(true);
 
     try {
-      // Save note to DB and optionally get AI enrichment
       const res = await fetch(`/api/interview-data?id=${interviewId}&type=notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, requestAI: true }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setNotes(prev => prev.map(n =>
-          n.id === noteId
-            ? { ...n, loading: false, aiResponse: data.aiResponse || undefined }
-            : n
-        ));
-      } else {
-        setNotes(prev => prev.map(n =>
-          n.id === noteId ? { ...n, loading: false } : n
-        ));
+      if (!res.ok) {
+        setNotes(prev => prev.map(n => n.id === noteId ? { ...n, loading: false } : n));
       }
+      // Don't clear loading — the poll will clear it when AI responds
     } catch {
-      setNotes(prev => prev.map(n =>
-        n.id === noteId ? { ...n, loading: false } : n
-      ));
+      setNotes(prev => prev.map(n => n.id === noteId ? { ...n, loading: false } : n));
     } finally {
       setSending(false);
-      setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 100);
     }
   }, [input, interviewId, sending]);
 
