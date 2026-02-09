@@ -32,35 +32,75 @@ const TOPIC_LABELS: Record<string, { label: string; icon: string; color: string 
   'missing_angle': { label: 'Ángulo sin explorar', icon: '🔍', color: 'bg-cyan-500/15 text-cyan-300' },
 };
 
-function extractReadableContent(item: Suggestion): string {
-  const raw = item.suggestion || item.content || '';
-  
+function tryParseJSON(raw: string): any {
   try {
     let cleaned = raw.trim();
+    // Strip markdown code fences
     if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
     else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
     if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
-    cleaned = cleaned.trim();
-    
-    const parsed = JSON.parse(cleaned);
-    
-    if (parsed.recommended_questions && Array.isArray(parsed.recommended_questions)) {
-      return parsed.recommended_questions.join('\n');
-    }
-    if (parsed.question) return parsed.question;
-    if (parsed.text) return parsed.text;
-    if (parsed.suggestion) return parsed.suggestion;
-    if (parsed.content) return parsed.content;
-    if (typeof parsed === 'string') return parsed;
-    
-    if (Array.isArray(parsed)) {
-      return parsed.filter((s: unknown) => typeof s === 'string').join('\n');
-    }
-    
-    return raw;
+    return JSON.parse(cleaned.trim());
   } catch {
-    return raw;
+    return null;
   }
+}
+
+function extractReadableContent(item: Suggestion): string {
+  // Try suggestion field first, then content
+  const sources = [item.suggestion, item.content].filter(Boolean) as string[];
+  
+  for (const raw of sources) {
+    const parsed = tryParseJSON(raw);
+    if (!parsed || typeof parsed !== 'object') continue;
+    
+    // Extract recommended questions (array of strings or objects)
+    if (parsed.recommended_questions && Array.isArray(parsed.recommended_questions)) {
+      const questions = parsed.recommended_questions
+        .map((q: any) => {
+          if (typeof q === 'string') return q;
+          if (q.question) return q.why ? `${q.question} (${q.why})` : q.question;
+          if (q.text) return q.text;
+          return null;
+        })
+        .filter(Boolean);
+      if (questions.length > 0) return questions.join('\n');
+    }
+    
+    // Extract missing angles
+    if (parsed.missing_angles && Array.isArray(parsed.missing_angles)) {
+      return parsed.missing_angles.filter((s: any) => typeof s === 'string').join('\n');
+    }
+    
+    // Single question/text/suggestion
+    if (parsed.question) return parsed.why ? `${parsed.question} (${parsed.why})` : parsed.question;
+    if (parsed.pivot) return parsed.pivot;
+    if (parsed.text) return parsed.text;
+    if (typeof parsed.suggestion === 'string') return parsed.suggestion;
+    if (typeof parsed.content === 'string') return parsed.content;
+    if (typeof parsed.insight === 'string') return parsed.insight;
+    if (typeof parsed.follow_up === 'string') return parsed.follow_up;
+    
+    // Array of strings
+    if (Array.isArray(parsed)) {
+      const strs = parsed.filter((s: any) => typeof s === 'string');
+      if (strs.length > 0) return strs.join('\n');
+    }
+    
+    // Last resort: collect all string values from top-level keys (skip arrays/objects)
+    const readable = Object.entries(parsed)
+      .filter(([k, v]) => typeof v === 'string' && !['type', 'tier', 'timestamp', 'topic'].includes(k))
+      .map(([, v]) => v as string)
+      .filter(s => s.length > 5);
+    if (readable.length > 0) return readable.join(' — ');
+  }
+  
+  // Nothing parsed — return raw but strip JSON artifacts
+  const fallback = item.suggestion || item.content || '';
+  // If it looks like JSON, don't show it raw
+  if (fallback.trim().startsWith('{') || fallback.trim().startsWith('```')) {
+    return '(análisis pendiente de formato)';
+  }
+  return fallback;
 }
 
 export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps) {
