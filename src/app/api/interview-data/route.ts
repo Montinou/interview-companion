@@ -271,11 +271,18 @@ export async function POST(request: NextRequest) {
           topic: 'interviewer-note',
         });
 
-        // AI enrichment: notes are picked up by OpenClaw analyzer agents
-        // For now, return a contextual hint based on recent data
         let aiResponse: string | undefined;
         if (requestAI) {
           try {
+            // Get recent transcript for context
+            const recentTranscript = await db
+              .select({ speaker: transcripts.speaker, text: transcripts.text })
+              .from(transcripts)
+              .where(eq(transcripts.interviewId, interviewId))
+              .orderBy(desc(transcripts.id))
+              .limit(20);
+
+            // Get recent insights for context
             const recentInsights = await db.select()
               .from(aiInsights)
               .where(and(
@@ -283,15 +290,59 @@ export async function POST(request: NextRequest) {
                 sql`${aiInsights.type} != 'note'`
               ))
               .orderBy(desc(aiInsights.id))
-              .limit(3);
+              .limit(5);
 
-            if (recentInsights.length > 0) {
-              aiResponse = `📌 Nota guardada. Contexto reciente: ${recentInsights.map(i => `[${i.type}] ${i.content?.substring(0, 80)}`).join(' | ')}`;
+            const transcriptContext = recentTranscript
+              .reverse()
+              .map(t => `${t.speaker === 'Host' ? 'Interviewer' : 'Candidate'}: ${t.text}`)
+              .join('\n');
+
+            const insightContext = recentInsights
+              .map(i => `[${i.type}] ${i.content?.substring(0, 120)}`)
+              .join('\n');
+
+            const prompt = `You are an AI interview copilot helping a QA Engineer interviewer in real-time at Distillery.
+Recent transcript (last 20 lines):
+${transcriptContext || '(no transcript yet)'}
+
+Recent AI insights:
+${insightContext || '(none yet)'}
+
+The interviewer asks: "${text}"
+
+Respond concisely (1-3 sentences max) in the same language as the question. Be direct and actionable. If they ask for a question to ask, give ONE sharp indirect question.`;
+
+            // Call OpenAI-compatible endpoint (Vercel AI or local gateway)
+            const gatewayUrl = process.env.AI_GATEWAY_URL || process.env.OPENCLAW_GATEWAY_URL;
+            const gatewayToken = process.env.AI_GATEWAY_KEY || process.env.OPENCLAW_GATEWAY_TOKEN || '';
+
+            if (gatewayUrl) {
+              const aiRes = await fetch(`${gatewayUrl}/v1/chat/completions`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${gatewayToken}`,
+                },
+                body: JSON.stringify({
+                  model: process.env.AI_CHAT_MODEL || 'anthropic/claude-sonnet-4-5',
+                  messages: [{ role: 'user', content: prompt }],
+                  max_tokens: 300,
+                }),
+                signal: AbortSignal.timeout(15000),
+              });
+
+              if (aiRes.ok) {
+                const aiData = await aiRes.json();
+                aiResponse = aiData.choices?.[0]?.message?.content || 'No response from AI';
+              } else {
+                const errText = await aiRes.text().catch(() => '');
+                aiResponse = `📌 Nota guardada. (AI error: ${aiRes.status} ${errText.substring(0, 50)})`;
+              }
             } else {
-              aiResponse = '📌 Nota guardada. La AI la procesará cuando haya más contexto de la entrevista.';
+              aiResponse = '📌 Nota guardada. (No AI gateway configured — set AI_GATEWAY_URL in env)';
             }
-          } catch {
-            aiResponse = '📌 Nota guardada.';
+          } catch (e) {
+            aiResponse = `📌 Nota guardada. (AI timeout)`;
           }
         }
 
