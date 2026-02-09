@@ -58,6 +58,33 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
   const rec = scorecard?.recommendation || null;
   const hasScores = data.some(d => d.value > 0);
 
+  // Custom tick renderer to show label + score
+  const renderAxisTick = ({ payload, x, y, textAnchor, ...rest }: any) => {
+    const item = data.find(d => d.dim === payload.value);
+    const score = item?.value || 0;
+    return (
+      <g>
+        <text
+          x={x} y={y} textAnchor={textAnchor}
+          fill="hsl(var(--muted-foreground))"
+          fontSize={11} fontWeight={500}
+          {...rest}
+        >
+          {payload.value}
+        </text>
+        {hasScores && (
+          <text
+            x={x} y={y + 12} textAnchor={textAnchor}
+            fill={score >= 7 ? '#22c55e' : score >= 4 ? '#eab308' : '#ef4444'}
+            fontSize={12} fontWeight={700}
+          >
+            {score}/10
+          </text>
+        )}
+      </g>
+    );
+  };
+
   return (
     <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-2">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -66,24 +93,24 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
       <div className="h-[220px]">
         {hasScores ? (
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
+            <RadarChart data={data} cx="50%" cy="50%" outerRadius="60%">
               <PolarGrid stroke="hsl(var(--border))" />
               <PolarAngleAxis 
                 dataKey="dim" 
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} 
+                tick={renderAxisTick}
               />
               <PolarRadiusAxis 
                 angle={90} 
                 domain={[0, 10]} 
-                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
-                tickCount={6} 
+                tick={false}
+                axisLine={false}
               />
               <Radar 
                 dataKey="value" 
                 stroke="#8b5cf6" 
                 fill="#8b5cf6" 
-                fillOpacity={0.25} 
-                dot={{ r: 3, fill: '#8b5cf6' }} 
+                fillOpacity={0.3} 
+                dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} 
               />
             </RadarChart>
           </ResponsiveContainer>
