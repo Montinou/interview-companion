@@ -9,6 +9,10 @@ const isPublicRoute = createRouteMatcher([
   '/api/interviews/active',              // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/transcript',      // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/insights',        // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/interviews/:id/insights/:insightId/used', // Protected by INTERNAL_API_KEY
+  '/api/interviews/:id/stats',           // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/interviews/:id/scorecard',       // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/interviews/:id/stream',          // SSE stream, protected by INTERNAL_API_KEY
   '/api/interview-data',                 // Unified endpoint, protected by INTERNAL_API_KEY
 ]);
 
