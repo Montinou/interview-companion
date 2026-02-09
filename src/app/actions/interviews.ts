@@ -56,7 +56,7 @@ export async function createInterview(formData: FormData) {
   }).returning();
 
   revalidatePath('/dashboard/interviews');
-  redirect(`/dashboard/interviews/${interview.id}`);
+  redirect(`/dashboard/live-interview?id=${interview.id}`);
 }
 
 export async function updateInterviewStatus(
