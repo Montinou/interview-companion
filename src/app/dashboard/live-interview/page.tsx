@@ -12,6 +12,7 @@ import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
 import { StatsPanel } from '@/components/interview/StatsPanel';
 import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
 import { ScorecardPanel } from '@/components/interview/ScorecardPanel';
+import { RadarScorecard } from '@/components/interview/RadarScorecard';
 import { Button } from '@/components/ui-button';
 
 // Force dynamic rendering — never cache this page
@@ -180,6 +181,14 @@ export default async function InterviewDetailPage({
                 </div>
               )}
             </div>
+
+            {/* AI Radar Scorecard */}
+            {interview.status !== 'scheduled' && (
+              <RadarScorecard
+                interviewId={interview.id}
+                isLive={isLive}
+              />
+            )}
           </div>
 
           {/* Center Column - Main Content */}
