@@ -110,8 +110,37 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(scorecard || null);
       }
 
+      case 'plan': {
+        // Interview planning: sections → topics → questions
+        const sections = await db.execute(sql`
+          SELECT s.id, s.name, s.description, s.duration_min, s.sort_order,
+            COALESCE(json_agg(
+              json_build_object(
+                'id', t.id, 'name', t.name, 'description', t.description,
+                'priority', t.priority, 'sort_order', t.sort_order,
+                'questions', (
+                  SELECT COALESCE(json_agg(
+                    json_build_object(
+                      'id', q.id, 'question', q.question, 'purpose', q.purpose,
+                      'expected_signals', q.expected_signals, 'follow_ups', q.follow_ups,
+                      'asked', q.asked, 'answer_quality', q.answer_quality, 'notes', q.notes
+                    ) ORDER BY q.sort_order
+                  ), '[]'::json)
+                  FROM interview_questions q WHERE q.topic_id = t.id
+                )
+              ) ORDER BY t.sort_order
+            ) FILTER (WHERE t.id IS NOT NULL), '[]'::json) as topics
+          FROM interview_sections s
+          LEFT JOIN interview_topics t ON t.section_id = s.id
+          WHERE s.interview_id = ${interviewId}
+          GROUP BY s.id, s.name, s.description, s.duration_min, s.sort_order
+          ORDER BY s.sort_order
+        `);
+        return NextResponse.json(sections.rows || []);
+      }
+
       default:
-        return NextResponse.json({ error: 'Invalid type. Use: transcript, insights, stats, scorecard' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid type. Use: transcript, insights, stats, scorecard, plan' }, { status: 400 });
     }
   } catch (error) {
     console.error('Error in /api/interview-data:', error);

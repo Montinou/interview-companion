@@ -10,6 +10,7 @@ import { SuggestionsPanel } from '@/components/interview/SuggestionsPanel';
 import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
 import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
 import { NotesPanel } from '@/components/interview/NotesPanel';
+import { InterviewPlan } from '@/components/interview/InterviewPlan';
 import { LiveTimer } from '@/components/interview/LiveTimer';
 import { Button } from '@/components/ui-button';
 
@@ -111,8 +112,8 @@ export default async function InterviewDetailPage({
         </div>
       </header>
 
-      {/* Main 4-column grid — fills remaining height */}
-      <div className="flex-1 grid grid-cols-[20%_30%_25%_25%] gap-2 p-2 min-h-0">
+      {/* Main 5-column grid — fills remaining height */}
+      <div className="flex-1 grid grid-cols-[16%_18%_24%_22%_20%] gap-2 p-2 min-h-0">
 
         {/* Col 1: AI Radar + Notes */}
         <div className="flex flex-col gap-2 min-h-0">
@@ -124,17 +125,22 @@ export default async function InterviewDetailPage({
           </div>
         </div>
 
-        {/* Col 2: Insights Timeline */}
+        {/* Col 2: Interview Plan */}
+        <div className="min-h-0">
+          <InterviewPlan interviewId={interview.id} />
+        </div>
+
+        {/* Col 3: Insights Timeline */}
         <div className="min-h-0">
           <InsightsTimeline interviewId={interview.id} isLive={isLive} />
         </div>
 
-        {/* Col 3: Suggestions */}
+        {/* Col 4: Suggestions */}
         <div className="min-h-0">
           <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
         </div>
 
-        {/* Col 4: Transcript */}
+        {/* Col 5: Transcript */}
         <div className="min-h-0">
           <TranscriptPanel interviewId={interview.id} isLive={isLive} />
         </div>
