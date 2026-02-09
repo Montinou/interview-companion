@@ -85,14 +85,14 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
         icon: Mic,
         label: 'Entrevistador',
         bgColor: 'bg-blue-500/10',
-        textColor: 'text-blue-600',
+        textColor: 'text-blue-400',
       };
     }
     return {
       icon: User,
       label: 'Candidato',
       bgColor: 'bg-purple-500/10',
-      textColor: 'text-purple-600',
+      textColor: 'text-purple-400',
     };
   };
 

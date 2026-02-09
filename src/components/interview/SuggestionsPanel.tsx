@@ -31,8 +31,8 @@ function extractReadableContent(item: Suggestion): string {
     
     const parsed = JSON.parse(cleaned);
     
-    // Handle various JSON structures
-    if (parsed.recommended_questions) {
+    // Handle various JSON structures from tier1/tier2 analyzers
+    if (parsed.recommended_questions && Array.isArray(parsed.recommended_questions)) {
       return parsed.recommended_questions.join('\n');
     }
     if (parsed.question) return parsed.question;
@@ -43,10 +43,9 @@ function extractReadableContent(item: Suggestion): string {
     
     // If it's an array of strings
     if (Array.isArray(parsed)) {
-      return parsed.filter(s => typeof s === 'string').join('\n');
+      return parsed.filter((s: unknown) => typeof s === 'string').join('\n');
     }
     
-    // Fallback: stringify nicely
     return raw;
   } catch {
     return raw;
@@ -102,7 +101,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
     <div className="rounded-xl border border-yellow-500/20 bg-[#111118] p-4 h-full flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4 shrink-0">
-        <div className="rounded-lg bg-yellow-500/10 p-2">
+        <div className="rounded-lg bg-yellow-500/15 p-2">
           <Lightbulb className="h-5 w-5 text-yellow-500" />
         </div>
         <div>
@@ -127,16 +126,16 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-8 text-gray-500"
+              className="text-center py-8"
             >
-              <Lightbulb className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <Lightbulb className="h-10 w-10 mx-auto mb-3 text-gray-600" />
               <p className="text-gray-400">No hay sugerencias todavía</p>
               <p className="text-sm text-gray-500">Aparecerán durante la entrevista</p>
             </motion.div>
           ) : (
             suggestions.map((suggestion, index) => {
               const content = extractReadableContent(suggestion);
-              const lines = content.split('\n').filter(l => l.trim());
+              const lines = content.split('\n').filter((l: string) => l.trim());
               const isMultiLine = lines.length > 1;
 
               return (
@@ -148,7 +147,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                   transition={{ delay: index * 0.05 }}
                   className={`p-3 rounded-lg border transition-all ${
                     suggestion.used
-                      ? 'bg-green-500/5 border-green-500/20 opacity-60'
+                      ? 'bg-green-900/20 border-green-500/20 opacity-60'
                       : 'bg-gray-800/40 border-yellow-500/20 hover:border-yellow-500/40'
                   }`}
                 >
@@ -161,7 +160,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                       )}
                       {isMultiLine ? (
                         <ul className="space-y-1.5">
-                          {lines.map((line, i) => (
+                          {lines.map((line: string, i: number) => (
                             <li key={i} className="text-sm text-gray-100 leading-relaxed flex gap-2">
                               <span className="text-yellow-500 shrink-0">•</span>
                               <span>{line.replace(/^[-•*]\s*/, '')}</span>
@@ -169,7 +168,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                           ))}
                         </ul>
                       ) : (
-                        <p className="text-sm text-gray-100 leading-relaxed font-medium">
+                        <p className="text-sm text-gray-100 leading-relaxed">
                           {content}
                         </p>
                       )}
@@ -189,7 +188,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                     )}
                     
                     {suggestion.used && (
-                      <div className="shrink-0 p-2 text-green-500">
+                      <div className="shrink-0 p-2 text-green-400">
                         <Check className="h-4 w-4" />
                       </div>
                     )}

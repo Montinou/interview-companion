@@ -66,7 +66,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
       <g>
         <text
           x={x} y={y} textAnchor={textAnchor}
-          fill="hsl(var(--muted-foreground))"
+          fill="#d1d5db"
           fontSize={11} fontWeight={500}
           {...rest}
         >
@@ -94,7 +94,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
         {hasScores ? (
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={data} cx="50%" cy="50%" outerRadius="60%">
-              <PolarGrid stroke="hsl(var(--border))" />
+              <PolarGrid stroke="#374151" />
               <PolarAngleAxis 
                 dataKey="dim" 
                 tick={renderAxisTick}
@@ -128,7 +128,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
             className={`flex-1 py-1 rounded text-center text-[10px] font-medium transition-all ${
               rec === r.key
                 ? `${r.color} text-white ring-1 ring-white/30`
-                : 'bg-muted/30 text-muted-foreground/50'
+                : 'bg-gray-800/40 text-gray-500'
             }`}
           >
             {r.label}
