@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, ChevronUp, FileText, User, Mic } from 'lucide-react';
+import { FileText, User, Mic, X } from 'lucide-react';
 
 interface TranscriptEntry {
   id: number;
@@ -14,10 +14,11 @@ interface TranscriptEntry {
 interface TranscriptPanelProps {
   interviewId: number;
   isLive: boolean;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: TranscriptPanelProps) {
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,8 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
   }, [interviewId]);
 
   useEffect(() => {
+    if (!isOpen) return;
+    
     fetchTranscript();
 
     if (!isLive) return;
@@ -59,14 +62,14 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
     // Poll for new transcript entries
     const interval = setInterval(fetchTranscript, 3000);
     return () => clearInterval(interval);
-  }, [interviewId, isLive, fetchTranscript]);
+  }, [interviewId, isLive, isOpen, fetchTranscript]);
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {
-    if (isExpanded && scrollRef.current) {
+    if (isOpen && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [transcript, isExpanded]);
+  }, [transcript, isOpen]);
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('es-AR', {
@@ -94,53 +97,58 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden h-full flex flex-col"
-    >
-      {/* Header - Clickable to expand */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-gray-500/10 p-2">
-            <FileText className="h-5 w-5 text-gray-600" />
-          </div>
-          <div className="text-left">
-            <h3 className="font-semibold">Transcript</h3>
-            <p className="text-sm text-muted-foreground">
-              {transcript.length} entradas
-            </p>
-          </div>
-        </div>
-        {isExpanded ? (
-          <ChevronUp className="h-5 w-5 text-muted-foreground" />
-        ) : (
-          <ChevronDown className="h-5 w-5 text-muted-foreground" />
-        )}
-      </button>
-
-      {/* Collapsible Content */}
-      <AnimatePresence>
-        {isExpanded && (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
           <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 z-40"
+          />
+
+          {/* Slide-over Panel */}
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 h-full w-[600px] bg-[#111118] border-l border-gray-800 z-50 flex flex-col"
           >
+            {/* Header */}
+            <div className="p-4 border-b border-gray-800/50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-gray-500/10 p-2">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Transcript</h3>
+                  <p className="text-sm text-gray-500">
+                    {transcript.length} entradas
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Content */}
             <div
               ref={scrollRef}
-              className="flex-1 min-h-0 overflow-y-auto p-4 pt-0 space-y-3"
+              className="flex-1 overflow-y-auto p-4 space-y-3"
             >
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <div className="animate-spin h-6 w-6 border-2 border-gray-500 border-t-transparent rounded-full" />
                 </div>
               ) : transcript.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
+                <div className="text-center py-8 text-gray-500">
                   <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
                   <p>No hay transcript todavía</p>
                 </div>
@@ -152,7 +160,7 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
                   return (
                     <div
                       key={entry.id}
-                      className="flex gap-3 p-3 rounded-lg bg-muted/30"
+                      className="flex gap-3 p-3 rounded-lg bg-gray-800/30"
                     >
                       <div className={`shrink-0 p-1.5 rounded-full ${config.bgColor}`}>
                         <Icon className={`h-3 w-3 ${config.textColor}`} />
@@ -162,11 +170,11 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
                           <span className={`text-xs font-medium ${config.textColor}`}>
                             {config.label}
                           </span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-gray-500">
                             {formatTime(entry.timestamp)}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed">{entry.text}</p>
+                        <p className="text-sm leading-relaxed text-gray-300">{entry.text}</p>
                       </div>
                     </div>
                   );
@@ -174,8 +182,8 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
               )}
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }

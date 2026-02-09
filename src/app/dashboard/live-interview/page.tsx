@@ -8,18 +8,19 @@ import { updateInterviewStatus } from '@/app/actions/interviews';
 import { RadarScorecard } from '@/components/interview/RadarScorecard';
 import { SuggestionsPanel } from '@/components/interview/SuggestionsPanel';
 import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
-import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
 import { NotesPanel } from '@/components/interview/NotesPanel';
 import { InterviewPlan } from '@/components/interview/InterviewPlan';
+import { InterviewGuide } from '@/components/interview/InterviewGuide';
 import { LiveTimer } from '@/components/interview/LiveTimer';
 import { Button } from '@/components/ui-button';
+import { TranscriptModalWrapper } from '@/components/interview/TranscriptModalWrapper';
 
 export const dynamic = 'force-dynamic';
 
 /**
  * Live Interview HUD — Single screen, no scroll.
  * Optimized for 3440px ultrawide (32").
- * Version: 3
+ * Version: 4 - Interview Guide + Transcript Modal
  */
 export default async function InterviewDetailPage({
   searchParams,
@@ -113,8 +114,8 @@ export default async function InterviewDetailPage({
         </div>
       </header>
 
-      {/* Main 5-column grid — fills remaining height */}
-      <div className="flex-1 grid grid-cols-[16%_18%_24%_22%_20%] gap-2 p-2 min-h-0">
+      {/* Main 4-column grid — fills remaining height */}
+      <div className="flex-1 grid grid-cols-[18%_22%_30%_30%] gap-2 p-2 min-h-0">
 
         {/* Col 1: AI Radar + Notes */}
         <div className="flex flex-col gap-2 min-h-0">
@@ -131,21 +132,24 @@ export default async function InterviewDetailPage({
           <InterviewPlan interviewId={interview.id} />
         </div>
 
-        {/* Col 3: Insights Timeline */}
+        {/* Col 3: Interview Guide */}
         <div className="min-h-0">
-          <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+          <InterviewGuide />
         </div>
 
-        {/* Col 4: Suggestions */}
-        <div className="min-h-0">
-          <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
-        </div>
-
-        {/* Col 5: Transcript */}
-        <div className="min-h-0">
-          <TranscriptPanel interviewId={interview.id} isLive={isLive} />
+        {/* Col 4: Insights + Suggestions stacked */}
+        <div className="flex flex-col gap-2 min-h-0">
+          <div className="flex-1 min-h-0">
+            <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+          </div>
+          <div className="flex-1 min-h-0">
+            <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+          </div>
         </div>
       </div>
+
+      {/* Transcript Modal + Floating Button */}
+      <TranscriptModalWrapper interviewId={interview.id} isLive={isLive} />
     </div>
   );
 }

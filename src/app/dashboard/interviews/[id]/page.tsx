@@ -10,7 +10,7 @@ import { LiveHeader } from '@/components/interview/LiveHeader';
 import { SuggestionsPanel } from '@/components/interview/SuggestionsPanel';
 import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
 import { StatsPanel } from '@/components/interview/StatsPanel';
-import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
+import { TranscriptModalWrapper } from '@/components/interview/TranscriptModalWrapper';
 import { ScorecardPanel } from '@/components/interview/ScorecardPanel';
 import { Button } from '@/components/ui-button';
 
@@ -184,12 +184,6 @@ export default async function InterviewDetailPage({
               isLive={isLive}
             />
 
-            {/* Transcript (Collapsible) */}
-            <TranscriptPanel
-              interviewId={interview.id}
-              isLive={isLive}
-            />
-
             {/* Scorecard (visible after interview starts) */}
             {interview.status !== 'scheduled' && (
               <ScorecardPanel interviewId={interview.id} />
@@ -207,6 +201,9 @@ export default async function InterviewDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Transcript Modal + Floating Button */}
+      <TranscriptModalWrapper interviewId={interview.id} isLive={isLive} />
     </div>
   );
 }
