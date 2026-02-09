@@ -59,7 +59,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
   const hasScores = data.some(d => d.value > 0);
 
   // Custom tick renderer to show label + score
-  const renderAxisTick = ({ payload, x, y, textAnchor, ...rest }: any) => {
+  const renderAxisTick = ({ payload, x, y, textAnchor, fill: _fill, stroke: _stroke, ...rest }: any) => {
     const item = data.find(d => d.dim === payload.value);
     const score = item?.value || 0;
     return (

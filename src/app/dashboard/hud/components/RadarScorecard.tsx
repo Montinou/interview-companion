@@ -34,7 +34,7 @@ export default function RadarScorecard({ scorecard }: Props) {
   const rec = scorecard?.recommendation || null;
   const hasScores = data.some(d => d.value > 0);
 
-  const renderAxisTick = ({ payload, x, y, textAnchor, ...rest }: any) => {
+  const renderAxisTick = ({ payload, x, y, textAnchor, fill: _fill, stroke: _stroke, ...rest }: any) => {
     const item = data.find(d => d.dim === payload.value);
     const score = item?.value || 0;
     return (
