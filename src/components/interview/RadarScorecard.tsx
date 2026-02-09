@@ -8,9 +8,9 @@ import {
 
 const DIMS = [
   { key: 'attitude', label: 'Actitud', esKey: 'actitud' },
-  { key: 'communication', label: 'Comunic.', esKey: 'comunicacion' },
+  { key: 'communication', label: 'Comunicación', esKey: 'comunicacion' },
   { key: 'technical', label: 'Técnico', esKey: 'tecnico' },
-  { key: 'strategic', label: 'Estratég.', esKey: 'estrategico' },
+  { key: 'strategic', label: 'Estrategia', esKey: 'estrategico' },
   { key: 'leadership', label: 'Liderazgo', esKey: 'liderazgo' },
   { key: 'english', label: 'Inglés', esKey: 'ingles' },
 ] as const;
@@ -66,17 +66,17 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
       <g>
         <text
           x={x} y={y} textAnchor={textAnchor}
-          fill="#d1d5db"
-          fontSize={11} fontWeight={500}
+          fill="#f3f4f6"
+          fontSize={13} fontWeight={600}
           {...rest}
         >
           {payload.value}
         </text>
         {hasScores && (
           <text
-            x={x} y={y + 12} textAnchor={textAnchor}
+            x={x} y={y + 15} textAnchor={textAnchor}
             fill={score >= 7 ? '#22c55e' : score >= 4 ? '#eab308' : '#ef4444'}
-            fontSize={12} fontWeight={700}
+            fontSize={14} fontWeight={700}
           >
             {score}/10
           </text>
@@ -90,10 +90,10 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
       <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
         📊 AI Scorecard
       </h3>
-      <div className="h-[220px]">
+      <div className="h-[280px]">
         {hasScores ? (
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} cx="50%" cy="50%" outerRadius="60%">
+            <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
               <PolarGrid stroke="#374151" />
               <PolarAngleAxis 
                 dataKey="dim" 
