@@ -152,7 +152,8 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error in /api/interview-data:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: 'Internal server error', detail: msg }, { status: 500 });
   }
 }
 
