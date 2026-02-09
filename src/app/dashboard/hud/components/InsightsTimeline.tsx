@@ -35,20 +35,20 @@ export default function InsightsTimeline({ insights }: Props) {
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-0">
         {!sorted.length ? (
-          <div className="text-gray-600 text-center py-2 text-xs">Sin flags aún</div>
+          <div className="text-gray-500 text-center py-2 text-xs">Sin flags aún</div>
         ) : sorted.map((f, i) => (
           <div key={i} className={`flex items-start gap-2 px-2 py-1.5 rounded text-xs ${
-            f.type === 'red' ? 'bg-red-950/20 border border-red-900/30' :
-            f.type === 'green' ? 'bg-green-950/20 border border-green-900/30' :
-            'bg-blue-950/20 border border-blue-900/30'
+            f.type === 'red' ? 'bg-red-950/30 border border-red-800/40' :
+            f.type === 'green' ? 'bg-emerald-950/30 border border-emerald-800/40' :
+            'bg-blue-950/30 border border-blue-800/40'
           }`}>
             <span className="shrink-0 mt-0.5">
               {f.type === 'red' ? '🔴' : f.type === 'green' ? '🟢' : '📌'}
             </span>
             <span className={`flex-1 leading-snug ${
-              f.type === 'red' ? 'text-red-200' : f.type === 'green' ? 'text-green-200' : 'text-blue-200'
+              f.type === 'red' ? 'text-red-100' : f.type === 'green' ? 'text-emerald-100' : 'text-blue-100'
             }`}>{f.text}</span>
-            <span className="text-gray-600 shrink-0 text-[10px]">{f.time}</span>
+            <span className="text-gray-400 shrink-0 text-[10px]">{f.time}</span>
           </div>
         ))}
       </div>

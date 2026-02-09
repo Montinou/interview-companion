@@ -6,12 +6,12 @@ import {
 import type { Scorecard } from '../page';
 
 const DIMS = [
-  { key: 'actitud', label: 'Actitud' },
-  { key: 'comunicacion', label: 'Comunic.' },
-  { key: 'tecnico', label: 'Técnico' },
-  { key: 'estrategico', label: 'Estratég.' },
-  { key: 'liderazgo', label: 'Liderazgo' },
-  { key: 'ingles', label: 'Inglés' },
+  { key: 'actitud', label: 'Attitude & Drive' },
+  { key: 'comunicacion', label: 'Communication' },
+  { key: 'tecnico', label: 'Technical Depth' },
+  { key: 'estrategico', label: 'Strategic Vision' },
+  { key: 'liderazgo', label: 'Leadership' },
+  { key: 'ingles', label: 'English Level' },
 ] as const;
 
 const RECS = [
@@ -40,8 +40,8 @@ export default function RadarScorecard({ scorecard }: Props) {
         <ResponsiveContainer width="100%" height="100%">
           <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
             <PolarGrid stroke="#333" />
-            <PolarAngleAxis dataKey="dim" tick={{ fill: '#9ca3af', fontSize: 10 }} />
-            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: '#555', fontSize: 8 }} tickCount={6} />
+            <PolarAngleAxis dataKey="dim" tick={{ fill: '#e5e7eb', fontSize: 10, fontWeight: 500 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: '#9ca3af', fontSize: 8 }} tickCount={6} />
             <Radar dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.25} dot={{ r: 3, fill: '#8b5cf6' }} />
           </RadarChart>
         </ResponsiveContainer>

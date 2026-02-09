@@ -28,7 +28,7 @@ export default function NotesPanel() {
       </div>
       <textarea value={notes} onChange={e => setNotes(e.target.value)}
         placeholder="Notas durante la entrevista..."
-        className="flex-1 bg-transparent text-gray-200 text-sm p-2 resize-none focus:outline-none placeholder:text-gray-700 min-h-0"
+        className="flex-1 bg-transparent text-gray-100 text-sm p-2 resize-none focus:outline-none placeholder:text-gray-500 min-h-0"
         onBlur={save} />
     </div>
   );
