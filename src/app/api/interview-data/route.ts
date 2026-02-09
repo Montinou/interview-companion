@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { neon } from '@neondatabase/serverless';
 import { db } from '@/lib/db';
 import { aiInsights, transcripts, interviews, scorecards } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, sql } from 'drizzle-orm';
@@ -111,36 +112,34 @@ export async function GET(request: NextRequest) {
       }
 
       case 'plan': {
-        // Interview planning: 3 simple queries instead of complex nested JSON
-        const sectionsResult = await db.execute(sql`
+        // Use raw neon() for tables not in Drizzle schema
+        const rawSql = neon(process.env.DATABASE_URL!);
+        
+        const sectionRows = await rawSql`
           SELECT id, name, description, duration_min, sort_order
           FROM interview_sections WHERE interview_id = ${interviewId}
-          ORDER BY sort_order
-        `);
-        const topicsResult = await db.execute(sql`
+          ORDER BY sort_order`;
+        const topicRows = await rawSql`
           SELECT t.id, t.section_id, t.name, t.description, t.priority, t.sort_order
           FROM interview_topics t
           JOIN interview_sections s ON t.section_id = s.id
           WHERE s.interview_id = ${interviewId}
-          ORDER BY t.sort_order
-        `);
-        const questionsResult = await db.execute(sql`
+          ORDER BY t.sort_order`;
+        const questionRows = await rawSql`
           SELECT q.id, q.topic_id, q.question, q.purpose, q.expected_signals,
                  q.follow_ups, q.asked, q.answer_quality, q.notes, q.sort_order
           FROM interview_questions q
           JOIN interview_topics t ON q.topic_id = t.id
           JOIN interview_sections s ON t.section_id = s.id
           WHERE s.interview_id = ${interviewId}
-          ORDER BY q.sort_order
-        `);
+          ORDER BY q.sort_order`;
 
-        // Assemble nested structure in JS
-        const questions = questionsResult.rows || [];
-        const topics = (topicsResult.rows || []).map((t: any) => ({
+        // Assemble nested structure
+        const topics = topicRows.map((t: any) => ({
           ...t,
-          questions: questions.filter((q: any) => q.topic_id === t.id),
+          questions: questionRows.filter((q: any) => q.topic_id === t.id),
         }));
-        const sections = (sectionsResult.rows || []).map((s: any) => ({
+        const sections = sectionRows.map((s: any) => ({
           ...s,
           topics: topics.filter((t: any) => t.section_id === s.id),
         }));
@@ -271,7 +270,8 @@ export async function POST(request: NextRequest) {
         if (!questionId) {
           return NextResponse.json({ error: 'Missing questionId' }, { status: 400 });
         }
-        await db.execute(sql`UPDATE interview_questions SET asked = true WHERE id = ${questionId}`);
+        const rawSql2 = neon(process.env.DATABASE_URL!);
+        await rawSql2`UPDATE interview_questions SET asked = true WHERE id = ${questionId}`;
         return NextResponse.json({ success: true });
       }
 
