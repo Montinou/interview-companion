@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { transcripts } from '@/lib/db/schema';
 import { eq, gt, and, asc, sql } from 'drizzle-orm';
+import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!validateApiKey(request)) {
+    return unauthorizedResponse('Invalid or missing API key');
+  }
+
   try {
     const { id } = await params;
     const interviewId = parseInt(id);

@@ -52,6 +52,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!validateApiKey(request)) {
+    return unauthorizedResponse('Invalid or missing API key');
+  }
+
   try {
     const { id } = await params;
     const interviewId = parseInt(id);
