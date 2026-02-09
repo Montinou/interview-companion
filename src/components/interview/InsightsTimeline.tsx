@@ -21,7 +21,7 @@ interface InsightsTimelineProps {
 const typeConfig = {
   'red-flag': {
     icon: AlertTriangle,
-    label: 'Red Flag',
+    label: 'Alerta',
     bgColor: 'bg-red-950/40',
     borderColor: 'border-l-red-500',
     iconBg: 'bg-red-900/60',
@@ -30,7 +30,7 @@ const typeConfig = {
   },
   'green-flag': {
     icon: CheckCircle2,
-    label: 'Green Flag',
+    label: 'Positivo',
     bgColor: 'bg-emerald-950/40',
     borderColor: 'border-l-emerald-500',
     iconBg: 'bg-emerald-900/60',
@@ -39,7 +39,7 @@ const typeConfig = {
   },
   'suggestion': {
     icon: Lightbulb,
-    label: 'Tip',
+    label: 'Sugerencia',
     bgColor: 'bg-blue-950/40',
     borderColor: 'border-l-blue-500',
     iconBg: 'bg-blue-900/60',
@@ -48,7 +48,7 @@ const typeConfig = {
   },
   'note': {
     icon: FileText,
-    label: 'Note',
+    label: 'Nota',
     bgColor: 'bg-gray-800/40',
     borderColor: 'border-l-gray-500',
     iconBg: 'bg-gray-700/60',
@@ -167,7 +167,7 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
               className="text-center py-12 text-gray-500"
             >
               <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p className="text-gray-400">No hay insights todavía</p>
+              <p className="text-gray-400">No hay observaciones todavía</p>
               <p className="text-sm text-gray-500">Se generarán durante la entrevista</p>
             </motion.div>
           ) : (

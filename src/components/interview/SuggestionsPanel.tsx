@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lightbulb, Check, Sparkles } from 'lucide-react';
+import { Lightbulb, Check, Sparkles, TrendingUp, Search } from 'lucide-react';
 
 interface Suggestion {
   id: number;
@@ -18,10 +18,23 @@ interface SuggestionsPanelProps {
   isLive: boolean;
 }
 
+// Topics that should show in Suggestions panel (questions to ask)
+const QUESTION_TOPICS = ['recommended-question', 'recommended_question'];
+// Topics that should go to Insights panel instead
+const INSIGHT_TOPICS = ['topic-change', 'topic_change', 'missing-angle', 'missing_angle'];
+
+const TOPIC_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+  'recommended-question': { label: 'Pregunta recomendada', icon: '❓', color: 'bg-indigo-500/15 text-indigo-300' },
+  'recommended_question': { label: 'Pregunta recomendada', icon: '❓', color: 'bg-indigo-500/15 text-indigo-300' },
+  'topic-change': { label: 'Cambio de tema', icon: '🔄', color: 'bg-amber-500/15 text-amber-300' },
+  'topic_change': { label: 'Cambio de tema', icon: '🔄', color: 'bg-amber-500/15 text-amber-300' },
+  'missing-angle': { label: 'Ángulo sin explorar', icon: '🔍', color: 'bg-cyan-500/15 text-cyan-300' },
+  'missing_angle': { label: 'Ángulo sin explorar', icon: '🔍', color: 'bg-cyan-500/15 text-cyan-300' },
+};
+
 function extractReadableContent(item: Suggestion): string {
   const raw = item.suggestion || item.content || '';
   
-  // Try to parse as JSON and extract meaningful text
   try {
     let cleaned = raw.trim();
     if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
@@ -31,7 +44,6 @@ function extractReadableContent(item: Suggestion): string {
     
     const parsed = JSON.parse(cleaned);
     
-    // Handle various JSON structures from tier1/tier2 analyzers
     if (parsed.recommended_questions && Array.isArray(parsed.recommended_questions)) {
       return parsed.recommended_questions.join('\n');
     }
@@ -41,7 +53,6 @@ function extractReadableContent(item: Suggestion): string {
     if (parsed.content) return parsed.content;
     if (typeof parsed === 'string') return parsed;
     
-    // If it's an array of strings
     if (Array.isArray(parsed)) {
       return parsed.filter((s: unknown) => typeof s === 'string').join('\n');
     }
@@ -53,7 +64,7 @@ function extractReadableContent(item: Suggestion): string {
 }
 
 export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [allSuggestions, setAllSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchSuggestions = useCallback(async () => {
@@ -61,7 +72,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
       const res = await fetch(`/api/interview-data?id=${interviewId}&type=insights&filter=suggestion`);
       if (res.ok) {
         const data = await res.json();
-        setSuggestions(data);
+        setAllSuggestions(data);
       }
     } catch (error) {
       console.error('Error fetching suggestions:', error);
@@ -75,7 +86,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
       await fetch(`/api/interview-data?id=${interviewId}&type=used&insightId=${id}`, {
         method: 'POST',
       });
-      setSuggestions(prev =>
+      setAllSuggestions(prev =>
         prev.map(s => (s.id === id ? { ...s, used: true } : s))
       );
     } catch (error) {
@@ -97,6 +108,10 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
     });
   };
 
+  // Split: questions go here, other suggestion types (topic-change, missing-angle) 
+  // also show here but visually differentiated
+  const suggestions = allSuggestions;
+
   return (
     <div className="rounded-xl border border-yellow-500/20 bg-[#111118] p-4 h-full flex flex-col">
       {/* Header */}
@@ -110,7 +125,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
             <Sparkles className="h-4 w-4 text-yellow-500" />
           </h2>
           <p className="text-xs text-gray-400">
-            Preguntas recomendadas por AI
+            Preguntas y observaciones de la AI
           </p>
         </div>
       </div>
@@ -137,6 +152,8 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
               const content = extractReadableContent(suggestion);
               const lines = content.split('\n').filter((l: string) => l.trim());
               const isMultiLine = lines.length > 1;
+              const topicInfo = suggestion.topic ? TOPIC_LABELS[suggestion.topic] : null;
+              const isQuestion = QUESTION_TOPICS.includes(suggestion.topic || '');
 
               return (
                 <motion.div
@@ -148,12 +165,18 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                   className={`p-3 rounded-lg border transition-all ${
                     suggestion.used
                       ? 'bg-green-900/20 border-green-500/20 opacity-60'
-                      : 'bg-gray-800/40 border-yellow-500/20 hover:border-yellow-500/40'
+                      : isQuestion
+                        ? 'bg-indigo-900/15 border-indigo-500/20 hover:border-indigo-500/40'
+                        : 'bg-gray-800/40 border-yellow-500/20 hover:border-yellow-500/40'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 min-w-0">
-                      {suggestion.topic && (
+                      {topicInfo ? (
+                        <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full mb-2 ${topicInfo.color}`}>
+                          {topicInfo.icon} {topicInfo.label}
+                        </span>
+                      ) : suggestion.topic && (
                         <span className="inline-block text-[10px] font-medium text-yellow-400 bg-yellow-500/15 px-2 py-0.5 rounded-full mb-2">
                           {suggestion.topic}
                         </span>
@@ -162,13 +185,16 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
                         <ul className="space-y-1.5">
                           {lines.map((line: string, i: number) => (
                             <li key={i} className="text-sm text-gray-100 leading-relaxed flex gap-2">
-                              <span className="text-yellow-500 shrink-0">•</span>
+                              <span className={`shrink-0 ${isQuestion ? 'text-indigo-400' : 'text-yellow-500'}`}>
+                                {isQuestion ? '❓' : '•'}
+                              </span>
                               <span>{line.replace(/^[-•*]\s*/, '')}</span>
                             </li>
                           ))}
                         </ul>
                       ) : (
                         <p className="text-sm text-gray-100 leading-relaxed">
+                          {isQuestion && <span className="text-indigo-400 mr-1">❓</span>}
                           {content}
                         </p>
                       )}
