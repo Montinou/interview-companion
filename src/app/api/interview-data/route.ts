@@ -215,8 +215,84 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
       }
 
+      case 'notes': {
+        const { text, requestAI } = body;
+        if (!text) {
+          return NextResponse.json({ error: 'Missing text' }, { status: 400 });
+        }
+
+        // Store the note as an insight of type 'note'
+        await db.insert(aiInsights).values({
+          interviewId,
+          type: 'note',
+          content: text,
+          severity: 'info',
+          topic: 'interviewer-note',
+        });
+
+        // If AI enrichment requested, get context and respond
+        let aiResponse: string | undefined;
+        if (requestAI) {
+          try {
+            // Get recent transcript for context
+            const recentTranscripts = await db.select()
+              .from(transcripts)
+              .where(eq(transcripts.interviewId, interviewId))
+              .orderBy(desc(transcripts.id))
+              .limit(10);
+
+            const recentInsights = await db.select()
+              .from(aiInsights)
+              .where(eq(aiInsights.interviewId, interviewId))
+              .orderBy(desc(aiInsights.id))
+              .limit(5);
+
+            const context = [
+              recentTranscripts.length > 0
+                ? `Recent transcript:\n${recentTranscripts.reverse().map(t => `${t.speaker}: ${t.text}`).join('\n')}`
+                : 'No transcript yet.',
+              recentInsights.length > 0
+                ? `Recent insights:\n${recentInsights.map(i => `[${i.type}] ${i.content}`).join('\n')}`
+                : '',
+            ].filter(Boolean).join('\n\n');
+
+            // Use the OpenClaw analyze endpoint to get AI response
+            const apiKey = process.env.INTERNAL_API_KEY || '';
+            const analyzeRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey,
+              },
+              body: JSON.stringify({
+                prompt: `You are an AI assistant helping an interviewer during a live QA Automation Engineer interview. The interviewer wrote this note/question: "${text}"\n\nContext:\n${context}\n\nRespond briefly (1-3 sentences) in the same language as the note. If it's a question, answer it. If it's an observation, enrich it with relevant follow-up suggestions. Be concise and actionable.`,
+              }),
+            });
+
+            if (analyzeRes.ok) {
+              const analyzeData = await analyzeRes.json();
+              aiResponse = analyzeData.response || analyzeData.text || undefined;
+            }
+          } catch (aiError) {
+            console.error('AI enrichment failed:', aiError);
+            // Non-blocking — note is saved even if AI fails
+          }
+        }
+
+        return NextResponse.json({ success: true, aiResponse });
+      }
+
+      case 'question-asked': {
+        const { questionId } = body;
+        if (!questionId) {
+          return NextResponse.json({ error: 'Missing questionId' }, { status: 400 });
+        }
+        await db.execute(sql`UPDATE interview_questions SET asked = true WHERE id = ${questionId}`);
+        return NextResponse.json({ success: true });
+      }
+
       default:
-        return NextResponse.json({ error: 'Invalid type for POST. Use: insights, scorecard, used' }, { status: 400 });
+        return NextResponse.json({ error: 'Invalid type for POST. Use: insights, scorecard, used, notes, question-asked' }, { status: 400 });
     }
   } catch (error) {
     console.error('Error in /api/interview-data POST:', error);
