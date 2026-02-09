@@ -39,11 +39,11 @@ export default function RadarScorecard({ scorecard }: Props) {
     const score = item?.value || 0;
     return (
       <g>
-        <text x={x} y={y} textAnchor={textAnchor} fill="#ffffff" fontSize={11} fontWeight={600} {...rest}>
+        <text x={x} y={y} textAnchor={textAnchor} fill="#d1d5db" fontSize={11} fontWeight={600} {...rest}>
           {payload.value}
         </text>
         {hasScores && (
-          <text x={x} y={y + 14} textAnchor={textAnchor} fill="#ffffff" fontSize={12} fontWeight={700}>
+          <text x={x} y={y + 14} textAnchor={textAnchor} fill={score >= 7 ? '#22c55e' : score >= 4 ? '#eab308' : '#ef4444'} fontSize={12} fontWeight={700}>
             {score}/10
           </text>
         )}
