@@ -39,7 +39,7 @@ export default function RadarScorecard({ scorecard }: Props) {
     const score = item?.value || 0;
     return (
       <g>
-        <text x={x} y={y} textAnchor={textAnchor} fill="#d1d5db" fontSize={11} fontWeight={600} {...rest}>
+        <text x={x} y={y} textAnchor={textAnchor} fill="#e2e8f0" fontSize={11} fontWeight={600} {...rest}>
           {payload.value}
         </text>
         {hasScores && (
