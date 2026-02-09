@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 
 /**
  * Validates machine-to-machine API key for tier1 → server communication.
@@ -24,6 +25,25 @@ export function validateApiKey(request: NextRequest): boolean {
   const xApiKey = request.headers.get('x-api-key');
   if (xApiKey === apiKey) return true;
 
+  return false;
+}
+
+/**
+ * Dual auth: accepts EITHER Clerk session (browser) OR API key (M2M).
+ * Use this for routes that need to be accessible from both dashboard and cron agents.
+ */
+export async function validateDualAuth(request: NextRequest): Promise<boolean> {
+  // First check API key (fast, no async)
+  if (validateApiKey(request)) return true;
+  
+  // Then check Clerk session (browser)
+  try {
+    const { userId } = await auth();
+    if (userId) return true;
+  } catch {
+    // Clerk auth failed, that's fine — might be M2M
+  }
+  
   return false;
 }
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { aiInsights, transcripts, interviews, scorecards } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, sql } from 'drizzle-orm';
-import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
+import { validateApiKey, validateDualAuth, unauthorizedResponse } from '@/lib/api-auth';
 
 /**
  * Unified API endpoint for interview data.
@@ -18,7 +18,7 @@ import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
  */
 
 export async function GET(request: NextRequest) {
-  if (!validateApiKey(request)) {
+  if (!(await validateDualAuth(request))) {
     return unauthorizedResponse();
   }
 
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!validateApiKey(request)) {
+  if (!(await validateDualAuth(request))) {
     return unauthorizedResponse();
   }
 
