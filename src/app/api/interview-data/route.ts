@@ -112,8 +112,9 @@ export async function GET(request: NextRequest) {
       }
 
       case 'plan': {
-        // Use raw neon() for tables not in Drizzle schema
-        const rawSql = neon(process.env.DATABASE_URL!);
+        // Use unpooled URL (channel_binding breaks raw neon() on pooler)
+        const unpooledUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL!;
+        const rawSql = neon(unpooledUrl);
         
         const sectionRows = await rawSql`
           SELECT id, name, description, duration_min, sort_order
