@@ -3,26 +3,22 @@ import { redirect, notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { interviews } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import Link from 'next/link';
-import { ArrowLeft, Play, CheckCircle, User, Mail, Phone, FileText, Calendar } from 'lucide-react';
+import { Play, CheckCircle } from 'lucide-react';
 import { updateInterviewStatus } from '@/app/actions/interviews';
-import { LiveHeader } from '@/components/interview/LiveHeader';
+import { RadarScorecard } from '@/components/interview/RadarScorecard';
 import { SuggestionsPanel } from '@/components/interview/SuggestionsPanel';
 import { InsightsTimeline } from '@/components/interview/InsightsTimeline';
-import { StatsPanel } from '@/components/interview/StatsPanel';
 import { TranscriptPanel } from '@/components/interview/TranscriptPanel';
-import { ScorecardPanel } from '@/components/interview/ScorecardPanel';
-import { RadarScorecard } from '@/components/interview/RadarScorecard';
+import { NotesPanel } from '@/components/interview/NotesPanel';
+import { LiveTimer } from '@/components/interview/LiveTimer';
 import { Button } from '@/components/ui-button';
 
-// Force dynamic rendering — never cache this page
 export const dynamic = 'force-dynamic';
 
 /**
- * Interview detail page using query params instead of dynamic route.
- * Workaround for Vercel [id] route 404 issue.
- * URL: /dashboard/interview?id=4
- * Version: 2
+ * Live Interview HUD — Single screen, no scroll.
+ * Optimized for 3440px ultrawide (32").
+ * Version: 3
  */
 export default async function InterviewDetailPage({
   searchParams,
@@ -31,198 +27,116 @@ export default async function InterviewDetailPage({
 }) {
   const user = await currentUser();
   const { id } = await searchParams;
-  
-  if (!user) {
-    redirect('/sign-in');
-  }
 
-  if (!id) {
-    redirect('/dashboard/interviews');
-  }
+  if (!user) redirect('/sign-in');
+  if (!id) redirect('/dashboard/interviews');
 
   const interview = await db.query.interviews.findFirst({
     where: eq(interviews.id, parseInt(id)),
-    with: {
-      candidate: true,
-      interviewer: true,
-    },
+    with: { candidate: true, interviewer: true },
   });
 
-  if (!interview) {
-    notFound();
-  }
+  if (!interview) notFound();
 
   const isLive = interview.status === 'live';
+  const c = interview.candidate;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
-      <div className="max-w-[1800px] mx-auto p-4 lg:p-6 space-y-6">
-        {/* Back Link */}
-        <Link
-          href="/dashboard/interviews"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Volver a Entrevistas
-        </Link>
-
-        {/* Live Header */}
-        <LiveHeader
-          candidateName={interview.candidate.name}
-          position={interview.candidate.jiraTicket ? `QA · ${interview.candidate.jiraTicket}` : 'QA Automation Engineer'}
-          status={interview.status}
-          startedAt={interview.startedAt?.toISOString() || null}
-        />
-
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          {/* Left Column - Candidate Info & Actions */}
-          <div className="xl:col-span-3 space-y-6">
-            {/* Candidate Card */}
-            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
-              <div className="flex items-center gap-3 pb-4 border-b">
-                <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
-                  <User className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Candidato</h3>
-                  <p className="text-xs text-muted-foreground">Entrevista #{interview.id}</p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Nombre</p>
-                  <p className="font-medium">{interview.candidate.name}</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <Mail className="h-3 w-3" />
-                    Email
-                  </div>
-                  <p className="text-sm font-medium break-all">{interview.candidate.email}</p>
-                </div>
-                {interview.candidate.phone && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Phone className="h-3 w-3" />
-                      Teléfono
-                    </div>
-                    <p className="text-sm font-medium">{interview.candidate.phone}</p>
-                  </div>
-                )}
-                {interview.candidate.jiraTicket && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <FileText className="h-3 w-3" />
-                      Jira Ticket
-                    </div>
-                    <a 
-                      href={`https://distillery.atlassian.net/browse/${interview.candidate.jiraTicket}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-mono font-medium text-blue-600 hover:underline"
-                    >
-                      {interview.candidate.jiraTicket}
-                    </a>
-                  </div>
-                )}
-                {interview.scheduledAt && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Calendar className="h-3 w-3" />
-                      Agendada
-                    </div>
-                    <p className="text-sm font-medium">
-                      {new Date(interview.scheduledAt).toLocaleDateString('es-AR', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'long',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
-              <h3 className="font-semibold">Acciones</h3>
-              
-              {interview.status === 'scheduled' && (
-                <form action={updateInterviewStatus.bind(null, interview.id, 'live')} className="w-full">
-                  <Button type="submit" className="w-full" size="lg">
-                    <Play className="h-4 w-4" />
-                    Iniciar Entrevista
-                  </Button>
-                </form>
-              )}
-              
-              {interview.status === 'live' && (
-                <form action={updateInterviewStatus.bind(null, interview.id, 'completed')} className="w-full">
-                  <Button type="submit" className="w-full" size="lg" variant="default">
-                    <CheckCircle className="h-4 w-4" />
-                    Finalizar Entrevista
-                  </Button>
-                </form>
-              )}
-
-              {interview.status === 'completed' && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                  <p className="font-medium text-green-600">Entrevista completada</p>
-                  {interview.completedAt && (
-                    <p className="text-sm">
-                      {new Date(interview.completedAt).toLocaleString('es-AR')}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* AI Radar Scorecard */}
-            {interview.status !== 'scheduled' && (
-              <RadarScorecard
-                interviewId={interview.id}
-                isLive={isLive}
-              />
-            )}
+    <div className="h-screen flex flex-col bg-[#0a0a0f] text-gray-200 overflow-hidden">
+      {/* Compact top bar */}
+      <header className="flex items-center justify-between px-4 py-2 border-b border-gray-800/50 bg-[#0d0d14] shrink-0">
+        <div className="flex items-center gap-4">
+          {/* Status dot + name */}
+          <div className="flex items-center gap-2">
+            <span className={`h-2.5 w-2.5 rounded-full ${
+              isLive ? 'bg-red-500 animate-pulse' : 
+              interview.status === 'scheduled' ? 'bg-yellow-500' : 'bg-green-500'
+            }`} />
+            <h1 className="text-base font-semibold text-white">{c.name}</h1>
+            <span className="text-xs text-gray-500">#{interview.id}</span>
           </div>
 
-          {/* Center Column - Main Content */}
-          <div className="xl:col-span-6 space-y-6">
-            <StatsPanel
-              interviewId={interview.id}
+          {/* Candidate meta - compact */}
+          <div className="flex items-center gap-3 text-xs text-gray-400">
+            {c.jiraTicket && (
+              <a
+                href={`https://distillery.atlassian.net/browse/${c.jiraTicket}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-blue-400 hover:underline"
+              >
+                {c.jiraTicket}
+              </a>
+            )}
+            <span>{c.email}</span>
+            {c.phone && <span>{c.phone}</span>}
+            {interview.scheduledAt && (
+              <span>
+                📅 {new Date(interview.scheduledAt).toLocaleDateString('es-AR', {
+                  weekday: 'short', day: 'numeric', month: 'short',
+                  hour: '2-digit', minute: '2-digit',
+                })}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {/* Timer */}
+          {interview.status !== 'scheduled' && (
+            <LiveTimer
               startedAt={interview.startedAt?.toISOString() || null}
               status={interview.status}
             />
+          )}
 
-            <InsightsTimeline
-              interviewId={interview.id}
-              isLive={isLive}
-            />
+          {/* Action buttons */}
+          {interview.status === 'scheduled' && (
+            <form action={updateInterviewStatus.bind(null, interview.id, 'live')}>
+              <Button type="submit" size="sm" className="bg-green-600 hover:bg-green-700">
+                <Play className="h-3 w-3" /> Iniciar
+              </Button>
+            </form>
+          )}
+          {interview.status === 'live' && (
+            <form action={updateInterviewStatus.bind(null, interview.id, 'completed')}>
+              <Button type="submit" size="sm" variant="destructive">
+                <CheckCircle className="h-3 w-3" /> Finalizar
+              </Button>
+            </form>
+          )}
+          {interview.status === 'completed' && (
+            <span className="text-xs text-green-400 font-medium">✓ Completada</span>
+          )}
+        </div>
+      </header>
 
-            <TranscriptPanel
-              interviewId={interview.id}
-              isLive={isLive}
-            />
+      {/* Main 4-column grid — fills remaining height */}
+      <div className="flex-1 grid grid-cols-[20%_30%_25%_25%] gap-2 p-2 min-h-0">
 
-            {interview.status !== 'scheduled' && (
-              <ScorecardPanel interviewId={interview.id} />
-            )}
+        {/* Col 1: AI Radar + Notes */}
+        <div className="flex flex-col gap-2 min-h-0">
+          <div className="shrink-0">
+            <RadarScorecard interviewId={interview.id} isLive={isLive} />
           </div>
-
-          {/* Right Column - Suggestions */}
-          <div className="xl:col-span-3">
-            <div className="sticky top-6">
-              <SuggestionsPanel
-                interviewId={interview.id}
-                isLive={isLive}
-              />
-            </div>
+          <div className="flex-1 min-h-0">
+            <NotesPanel interviewId={interview.id} />
           </div>
+        </div>
+
+        {/* Col 2: Insights Timeline */}
+        <div className="min-h-0">
+          <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+        </div>
+
+        {/* Col 3: Suggestions */}
+        <div className="min-h-0">
+          <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+        </div>
+
+        {/* Col 4: Transcript */}
+        <div className="min-h-0">
+          <TranscriptPanel interviewId={interview.id} isLive={isLive} />
         </div>
       </div>
     </div>
