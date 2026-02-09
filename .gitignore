@@ -7,3 +7,5 @@ next-env.d.ts
 .env.production
 seed-interviews.mjs
 seed-interviews.ts
+.env.vercel-check
+.env*

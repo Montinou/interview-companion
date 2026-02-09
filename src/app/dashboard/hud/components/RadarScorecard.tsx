@@ -6,12 +6,12 @@ import {
 import type { Scorecard } from '../page';
 
 const DIMS = [
-  { key: 'actitud', label: 'Attitude & Drive' },
-  { key: 'comunicacion', label: 'Communication' },
-  { key: 'tecnico', label: 'Technical Depth' },
-  { key: 'estrategico', label: 'Strategic Vision' },
-  { key: 'liderazgo', label: 'Leadership' },
-  { key: 'ingles', label: 'English Level' },
+  { key: 'actitud', label: 'Actitud' },
+  { key: 'comunicacion', label: 'Comunicación' },
+  { key: 'tecnico', label: 'Técnico' },
+  { key: 'estrategico', label: 'Estrategia' },
+  { key: 'liderazgo', label: 'Liderazgo' },
+  { key: 'ingles', label: 'Inglés' },
 ] as const;
 
 const RECS = [
@@ -32,17 +32,35 @@ export default function RadarScorecard({ scorecard }: Props) {
   }));
 
   const rec = scorecard?.recommendation || null;
+  const hasScores = data.some(d => d.value > 0);
+
+  const renderAxisTick = ({ payload, x, y, textAnchor, ...rest }: any) => {
+    const item = data.find(d => d.dim === payload.value);
+    const score = item?.value || 0;
+    return (
+      <g>
+        <text x={x} y={y} textAnchor={textAnchor} fill="#ffffff" fontSize={11} fontWeight={600} {...rest}>
+          {payload.value}
+        </text>
+        {hasScores && (
+          <text x={x} y={y + 14} textAnchor={textAnchor} fill="#ffffff" fontSize={12} fontWeight={700}>
+            {score}/10
+          </text>
+        )}
+      </g>
+    );
+  };
 
   return (
     <div className="bg-[#111118] rounded-lg border border-gray-800 flex flex-col h-full p-2">
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">📊 Scorecard</h3>
+      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">📊 AI Scorecard</h3>
       <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data} cx="50%" cy="50%" outerRadius="70%">
-            <PolarGrid stroke="#333" />
-            <PolarAngleAxis dataKey="dim" tick={{ fill: '#e5e7eb', fontSize: 10, fontWeight: 500 }} />
-            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={{ fill: '#9ca3af', fontSize: 8 }} tickCount={6} />
-            <Radar dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.25} dot={{ r: 3, fill: '#8b5cf6' }} />
+          <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
+            <PolarGrid stroke="#374151" />
+            <PolarAngleAxis dataKey="dim" tick={renderAxisTick} />
+            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
+            <Radar dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} />
           </RadarChart>
         </ResponsiveContainer>
       </div>

@@ -66,7 +66,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
       <g>
         <text
           x={x} y={y} textAnchor={textAnchor}
-          fill="#f3f4f6"
+          fill="#ffffff"
           fontSize={13} fontWeight={600}
           {...rest}
         >
@@ -75,7 +75,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
         {hasScores && (
           <text
             x={x} y={y + 15} textAnchor={textAnchor}
-            fill={score >= 7 ? '#22c55e' : score >= 4 ? '#eab308' : '#ef4444'}
+            fill="#ffffff"
             fontSize={14} fontWeight={700}
           >
             {score}/10
