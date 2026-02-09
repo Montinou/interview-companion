@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/interviews/active',              // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/transcript',      // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/insights',        // Protected by INTERNAL_API_KEY, not Clerk
+  '/api/interview-data',                 // Unified endpoint, protected by INTERNAL_API_KEY
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
