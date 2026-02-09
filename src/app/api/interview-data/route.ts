@@ -136,7 +136,12 @@ export async function GET(request: NextRequest) {
           GROUP BY s.id, s.name, s.description, s.duration_min, s.sort_order
           ORDER BY s.sort_order
         `);
-        return NextResponse.json(sections.rows || []);
+        // Ensure topics is parsed JSON (some drivers return strings)
+        const parsed = (sections.rows || []).map((row: any) => ({
+          ...row,
+          topics: typeof row.topics === 'string' ? JSON.parse(row.topics) : row.topics,
+        }));
+        return NextResponse.json(parsed);
       }
 
       default:
