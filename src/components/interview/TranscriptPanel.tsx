@@ -97,7 +97,7 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden"
+      className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden h-full flex flex-col"
     >
       {/* Header - Clickable to expand */}
       <button
@@ -133,7 +133,7 @@ export function TranscriptPanel({ interviewId, isLive }: TranscriptPanelProps) {
           >
             <div
               ref={scrollRef}
-              className="max-h-[400px] overflow-y-auto p-4 pt-0 space-y-3"
+              className="flex-1 min-h-0 overflow-y-auto p-4 pt-0 space-y-3"
             >
               {loading ? (
                 <div className="flex items-center justify-center py-8">

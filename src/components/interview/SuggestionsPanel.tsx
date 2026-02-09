@@ -73,7 +73,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="rounded-xl border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 p-6"
+      className="rounded-xl border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-amber-500/5 p-6 h-full flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
@@ -92,7 +92,7 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
       </div>
 
       {/* Suggestions List */}
-      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-2">
         <AnimatePresence mode="popLayout">
           {loading ? (
             <div className="flex items-center justify-center py-8">

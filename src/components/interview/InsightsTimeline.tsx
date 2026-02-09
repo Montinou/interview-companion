@@ -115,7 +115,7 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/50 backdrop-blur-sm p-6"
+      className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 h-full flex flex-col"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
@@ -165,7 +165,7 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
       </div>
 
       {/* Timeline */}
-      <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-2">
         <AnimatePresence mode="popLayout">
           {loading ? (
             <div className="flex items-center justify-center py-12">
