@@ -31,7 +31,21 @@ interface PhaseSection {
   }[];
 }
 
-export function InterviewGuide() {
+interface InterviewGuideProps {
+  candidateName: string;
+  candidateTitle?: string;
+  jiraTicket?: string;
+  candidateEmail?: string;
+  candidatePhone?: string;
+}
+
+export function InterviewGuide({ 
+  candidateName, 
+  candidateTitle,
+  jiraTicket,
+  candidateEmail,
+  candidatePhone 
+}: InterviewGuideProps) {
   const [expandedPhases, setExpandedPhases] = useState<string[]>(['phase1']);
 
   const togglePhase = (phaseId: string) => {
@@ -42,18 +56,7 @@ export function InterviewGuide() {
     );
   };
 
-  const candidateSummary = {
-    name: 'Nicolas Lobos',
-    title: 'QA Automation Engineer',
-    experience: '7 years QA, 6 automation, Radium Rocket (6+ years)',
-    skills: 'JS/TS 6 years, Playwright 4 years, Cypress',
-    location: 'Rosario, Argentina',
-    english: 'C1 English certified',
-    teamwork: 'Works with USA/India teams',
-    preference: 'Wants to stay technical QA (not Lead)',
-    match: '8/9 with JD',
-    gaps: 'CI/CD (GitLab not GitHub/Azure), POM not textual, Data-driven depth'
-  };
+  const hasValidCandidateData = candidateName && candidateName !== 'Unknown Candidate';
 
   const phases: PhaseSection[] = [
     {
@@ -204,10 +207,10 @@ export function InterviewGuide() {
   ];
 
   const greenFlags = [
-    '6 years Radium Rocket = stability',
-    'Led Cypress→Playwright migration = ownership',
-    'Trained teams = mentorship',
-    'Prefers technical QA > Lead = knows what they want'
+    'Stability in previous roles',
+    'Led technical initiatives',
+    'Mentored team members',
+    'Clear career goals'
   ];
 
   return (
@@ -234,14 +237,31 @@ export function InterviewGuide() {
             <h4 className="text-xs font-semibold text-white">Candidate Summary</h4>
           </div>
           <div className="space-y-1 text-[10px] text-gray-400">
-            <p className="text-white font-medium text-[11px]">{candidateSummary.name} — {candidateSummary.title}</p>
-            <p>• {candidateSummary.experience}</p>
-            <p>• {candidateSummary.skills}</p>
-            <p>• {candidateSummary.location} — {candidateSummary.english}</p>
-            <p>• {candidateSummary.teamwork}</p>
-            <p>• {candidateSummary.preference}</p>
-            <p className="text-green-400">• Match: {candidateSummary.match}</p>
-            <p className="text-yellow-400">• Gaps: {candidateSummary.gaps}</p>
+            {hasValidCandidateData ? (
+              <>
+                <p className="text-white font-medium text-[11px]">
+                  {candidateName}
+                  {candidateTitle && ` — ${candidateTitle}`}
+                </p>
+                {candidateEmail && <p>• {candidateEmail}</p>}
+                {candidatePhone && <p>• {candidatePhone}</p>}
+                {jiraTicket && (
+                  <p>
+                    • Jira:{' '}
+                    <a
+                      href={`https://distillery.atlassian.net/browse/${jiraTicket}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      {jiraTicket}
+                    </a>
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-gray-500 italic">No candidate data loaded</p>
+            )}
           </div>
         </div>
 

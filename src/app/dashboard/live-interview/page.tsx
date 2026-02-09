@@ -134,7 +134,13 @@ export default async function InterviewDetailPage({
 
         {/* Col 3: Interview Guide */}
         <div className="min-h-0">
-          <InterviewGuide />
+          <InterviewGuide 
+            candidateName={c.name}
+            candidateTitle={c.jiraTicket ? "QA · " + c.jiraTicket : undefined}
+            candidateEmail={c.email}
+            candidatePhone={c.phone || undefined}
+            jiraTicket={c.jiraTicket || undefined}
+          />
         </div>
 
         {/* Col 4: Insights + Suggestions stacked */}

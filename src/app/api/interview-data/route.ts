@@ -159,13 +159,22 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!(await validateDualAuth(request))) {
-    return unauthorizedResponse();
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get('type') || '';
+  
+  // Use validateApiKey for transcript endpoint (capture script uses API key)
+  // Use validateDualAuth for all other endpoints
+  if (type === 'transcript') {
+    if (!(await validateApiKey(request))) {
+      return unauthorizedResponse();
+    }
+  } else {
+    if (!(await validateDualAuth(request))) {
+      return unauthorizedResponse();
+    }
   }
 
-  const { searchParams } = new URL(request.url);
   const interviewId = parseInt(searchParams.get('id') || '0');
-  const type = searchParams.get('type') || '';
 
   if (!interviewId) {
     return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
@@ -175,6 +184,28 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     switch (type) {
+      case 'transcript': {
+        // Accept either single entry or array of entries
+        const entries = Array.isArray(body.entries) ? body.entries : [body];
+        
+        if (entries.length === 0) {
+          return NextResponse.json({ error: 'No entries provided' }, { status: 400 });
+        }
+
+        // Insert all entries
+        const insertValues = entries.map((entry: any) => ({
+          interviewId,
+          timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
+          text: entry.text || '',
+          speaker: entry.speaker === 'interviewer' ? 'interviewer' : 'candidate',
+          confidence: entry.confidence ? Math.round(entry.confidence * 100) : null,
+        }));
+
+        await db.insert(transcripts).values(insertValues);
+
+        return NextResponse.json({ success: true, count: entries.length });
+      }
+
       case 'insights': {
         const { type: insightType, content, severity, suggestion, topic, responseQuality } = body;
         if (!insightType || !content) {
