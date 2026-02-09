@@ -14,6 +14,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/interviews/:id/scorecard',       // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/stream',          // SSE stream, protected by INTERNAL_API_KEY
   '/api/interview-data',                 // Unified endpoint, protected by INTERNAL_API_KEY
+  '/api/hud(.*)',                        // HUD dashboard API routes (public)
+  '/dashboard/hud',                      // HUD dashboard page (public)
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
