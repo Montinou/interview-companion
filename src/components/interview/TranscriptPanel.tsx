@@ -174,7 +174,7 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
                             {formatTime(entry.timestamp)}
                           </span>
                         </div>
-                        <p className="text-sm leading-relaxed text-gray-300">{entry.text}</p>
+                        <p className="text-sm leading-relaxed text-gray-100">{entry.text}</p>
                       </div>
                     </div>
                   );

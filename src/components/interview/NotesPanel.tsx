@@ -124,7 +124,7 @@ export function NotesPanel({ interviewId }: NotesPanelProps) {
             {note.aiResponse && (
               <div className="flex gap-2 pl-4">
                 <span className="text-[10px] text-indigo-400 shrink-0 pt-0.5">🤖</span>
-                <p className="text-xs text-indigo-200/80 bg-indigo-500/10 rounded px-2 py-1 flex-1 border border-indigo-500/20">
+                <p className="text-xs text-indigo-100 bg-indigo-500/15 rounded px-2 py-1 flex-1 border border-indigo-500/20 whitespace-pre-line">
                   {note.aiResponse}
                 </p>
               </div>

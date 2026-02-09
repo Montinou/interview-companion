@@ -22,38 +22,38 @@ const typeConfig = {
   'red-flag': {
     icon: AlertTriangle,
     label: 'Red Flag',
-    bgColor: 'bg-red-50 dark:bg-red-950/30',
+    bgColor: 'bg-red-950/40',
     borderColor: 'border-l-red-500',
-    iconBg: 'bg-red-100 dark:bg-red-900/50',
-    iconColor: 'text-red-600',
-    badgeColor: 'bg-red-500/10 text-red-600',
+    iconBg: 'bg-red-900/60',
+    iconColor: 'text-red-400',
+    badgeColor: 'bg-red-500/20 text-red-300',
   },
   'green-flag': {
     icon: CheckCircle2,
     label: 'Green Flag',
-    bgColor: 'bg-green-50 dark:bg-green-950/30',
-    borderColor: 'border-l-green-500',
-    iconBg: 'bg-green-100 dark:bg-green-900/50',
-    iconColor: 'text-green-600',
-    badgeColor: 'bg-green-500/10 text-green-600',
+    bgColor: 'bg-emerald-950/40',
+    borderColor: 'border-l-emerald-500',
+    iconBg: 'bg-emerald-900/60',
+    iconColor: 'text-emerald-400',
+    badgeColor: 'bg-emerald-500/20 text-emerald-300',
   },
   'suggestion': {
     icon: Lightbulb,
     label: 'Tip',
-    bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+    bgColor: 'bg-blue-950/40',
     borderColor: 'border-l-blue-500',
-    iconBg: 'bg-blue-100 dark:bg-blue-900/50',
-    iconColor: 'text-blue-600',
-    badgeColor: 'bg-blue-500/10 text-blue-600',
+    iconBg: 'bg-blue-900/60',
+    iconColor: 'text-blue-400',
+    badgeColor: 'bg-blue-500/20 text-blue-300',
   },
   'note': {
     icon: FileText,
     label: 'Note',
-    bgColor: 'bg-gray-50 dark:bg-gray-900/50',
-    borderColor: 'border-l-gray-400',
-    iconBg: 'bg-gray-100 dark:bg-gray-800',
-    iconColor: 'text-gray-600',
-    badgeColor: 'bg-gray-500/10 text-gray-600',
+    bgColor: 'bg-gray-800/40',
+    borderColor: 'border-l-gray-500',
+    iconBg: 'bg-gray-700/60',
+    iconColor: 'text-gray-400',
+    badgeColor: 'bg-gray-500/20 text-gray-300',
   },
 };
 
@@ -70,7 +70,6 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        // Filter out suggestions - they have their own panel
         setInsights(data.filter((i: Insight) => i.type !== 'suggestion'));
       }
     } catch (error) {
@@ -82,15 +81,9 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
 
   useEffect(() => {
     fetchInsights();
-
     if (!isLive) return;
-
-    // Polling (SSE disabled due to Vercel dynamic route issue)
     const pollInterval = setInterval(fetchInsights, 5000);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
+    return () => clearInterval(pollInterval);
   }, [interviewId, isLive, fetchInsights]);
 
   const formatTime = (timestamp: string) => {
@@ -112,20 +105,16 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 h-full flex flex-col"
-    >
+    <div className="rounded-xl border border-gray-700/50 bg-[#111118] p-4 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-purple-500/10 p-2.5">
-            <Clock className="h-5 w-5 text-purple-600" />
+          <div className="rounded-lg bg-purple-500/15 p-2">
+            <Clock className="h-5 w-5 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-xl font-bold">Insights</h2>
-            <p className="text-sm text-muted-foreground">Timeline de observaciones</p>
+            <h2 className="text-base font-bold text-white">Insights</h2>
+            <p className="text-xs text-gray-400">Timeline de observaciones</p>
           </div>
         </div>
 
@@ -135,8 +124,8 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
             onClick={() => setFilter(null)}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               filter === null
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted hover:bg-muted/80'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
             }`}
           >
             Todos
@@ -145,8 +134,8 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
             onClick={() => setFilter('red-flag')}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               filter === 'red-flag'
-                ? 'bg-red-500 text-white'
-                : 'bg-red-500/10 text-red-600 hover:bg-red-500/20'
+                ? 'bg-red-600 text-white'
+                : 'bg-red-500/15 text-red-300 hover:bg-red-500/25'
             }`}
           >
             🔴 {counts['red-flag']}
@@ -155,8 +144,8 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
             onClick={() => setFilter('green-flag')}
             className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
               filter === 'green-flag'
-                ? 'bg-green-500 text-white'
-                : 'bg-green-500/10 text-green-600 hover:bg-green-500/20'
+                ? 'bg-emerald-600 text-white'
+                : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
             }`}
           >
             🟢 {counts['green-flag']}
@@ -165,7 +154,7 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
       </div>
 
       {/* Timeline */}
-      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-2">
+      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
         <AnimatePresence mode="popLayout">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -175,11 +164,11 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-center py-12 text-muted-foreground"
+              className="text-center py-12 text-gray-500"
             >
               <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p>No hay insights todavía</p>
-              <p className="text-sm">Se generarán durante la entrevista</p>
+              <p className="text-gray-400">No hay insights todavía</p>
+              <p className="text-sm text-gray-500">Se generarán durante la entrevista</p>
             </motion.div>
           ) : (
             filteredInsights.map((insight, index) => {
@@ -193,25 +182,25 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
                   transition={{ delay: index * 0.03 }}
-                  className={`p-4 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
+                  className={`p-3 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`shrink-0 p-2 rounded-lg ${config.iconBg}`}>
+                    <div className={`shrink-0 p-1.5 rounded-lg ${config.iconBg}`}>
                       <Icon className={`h-4 w-4 ${config.iconColor}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badgeColor}`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${config.badgeColor}`}>
                           {config.label}
                         </span>
                         {insight.topic && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-[10px] text-gray-400">
                             • {insight.topic}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm leading-relaxed">{insight.content}</p>
-                      <p className="text-xs text-muted-foreground mt-2">
+                      <p className="text-sm leading-relaxed text-gray-100">{insight.content}</p>
+                      <p className="text-[10px] text-gray-500 mt-1.5">
                         {formatTime(insight.timestamp)}
                       </p>
                     </div>
@@ -222,6 +211,6 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </div>
   );
 }

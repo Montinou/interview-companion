@@ -86,8 +86,8 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
   };
 
   return (
-    <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+    <div className="rounded-xl border border-gray-700/50 bg-[#111118] p-4 space-y-2">
+      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
         📊 AI Scorecard
       </h3>
       <div className="h-[220px]">
@@ -115,7 +115,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
             </RadarChart>
           </ResponsiveContainer>
         ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+          <div className="h-full flex items-center justify-center text-gray-400 text-sm">
             Esperando análisis AI...
           </div>
         )}
@@ -136,7 +136,7 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
         ))}
       </div>
       {scorecard?.justification && (
-        <p className="text-xs text-muted-foreground italic border-t pt-2 mt-1">
+        <p className="text-xs text-gray-400 italic border-t border-gray-700/50 pt-2 mt-1">
           {scorecard.justification}
         </p>
       )}
