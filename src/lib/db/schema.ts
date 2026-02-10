@@ -10,6 +10,21 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// Job Positions table
+export const jobPositions = pgTable('job_positions', {
+  id: serial('id').primaryKey(),
+  title: varchar('title', { length: 256 }).notNull(),
+  description: text('description'),
+  requirements: jsonb('requirements'), // technical_skills, experience, english_level, nice_to_have
+  seniorityLevel: varchar('seniority_level', { length: 50 }),
+  location: varchar('location', { length: 256 }),
+  salaryRange: varchar('salary_range', { length: 100 }),
+  status: varchar('status', { length: 50 }).notNull().default('open'), // open, closed, on_hold
+  jiraEpic: varchar('jira_epic', { length: 50 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Candidates table
 export const candidates = pgTable('candidates', {
   id: serial('id').primaryKey(),
@@ -27,6 +42,7 @@ export const interviews = pgTable('interviews', {
   id: serial('id').primaryKey(),
   candidateId: integer('candidate_id').notNull().references(() => candidates.id, { onDelete: 'cascade' }),
   interviewerId: integer('interviewer_id').notNull().references(() => users.id),
+  jobPositionId: integer('job_position_id').references(() => jobPositions.id, { onDelete: 'set null' }),
   status: varchar('status', { length: 50 }).notNull().default('scheduled'), // scheduled, live, completed, cancelled
   scheduledAt: timestamp('scheduled_at'),
   startedAt: timestamp('started_at'),
@@ -80,6 +96,10 @@ export const usersRelations = relations(users, ({ many }) => ({
   interviews: many(interviews),
 }));
 
+export const jobPositionsRelations = relations(jobPositions, ({ many }) => ({
+  interviews: many(interviews),
+}));
+
 export const candidatesRelations = relations(candidates, ({ many }) => ({
   interviews: many(interviews),
 }));
@@ -92,6 +112,10 @@ export const interviewsRelations = relations(interviews, ({ one, many }) => ({
   interviewer: one(users, {
     fields: [interviews.interviewerId],
     references: [users.id],
+  }),
+  jobPosition: one(jobPositions, {
+    fields: [interviews.jobPositionId],
+    references: [jobPositions.id],
   }),
   transcripts: many(transcripts),
   scorecard: one(scorecards),
@@ -122,6 +146,9 @@ export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+export type JobPosition = typeof jobPositions.$inferSelect;
+export type NewJobPosition = typeof jobPositions.$inferInsert;
 
 export type Candidate = typeof candidates.$inferSelect;
 export type NewCandidate = typeof candidates.$inferInsert;
