@@ -137,7 +137,7 @@ export default async function InterviewDetailPage({
           <InterviewGuide 
             candidateName={c.name}
             candidateTitle={c.jiraTicket ? "QA · " + c.jiraTicket : undefined}
-            candidateEmail={c.email}
+            candidateEmail={c.email || undefined}
             candidatePhone={c.phone || undefined}
             jiraTicket={c.jiraTicket || undefined}
           />

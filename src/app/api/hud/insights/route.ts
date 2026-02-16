@@ -41,8 +41,9 @@ export async function GET() {
         // This is a full tier1 or tier2 JSON response stored as content
         parsed = contentJson;
       } else {
-        // Individual typed insight
-        if (isSuggestion && e.content) parsed.follow_up = e.content;
+        // Individual typed insight (v2 format from analyze-chunk)
+        if (e.suggestion) parsed.follow_up = e.suggestion;
+        else if (isSuggestion && e.content) parsed.follow_up = e.content;
         if (e.topic) parsed.topic = e.topic;
         if (e.type === 'red-flag') {
           parsed.flag = e.content;
@@ -52,6 +53,16 @@ export async function GET() {
           parsed.green_flags = [e.content];
           parsed.insight = e.content;
         }
+        if (e.type === 'contradiction') {
+          parsed.red_flags = [e.content];
+          parsed.flag = `⚡ ${e.content}`;
+        }
+        if (e.type === 'note') {
+          parsed.insight = e.content;
+        }
+        if (e.evidence) parsed.evidence = e.evidence;
+        if (e.sentiment) parsed.sentiment = e.sentiment;
+        if (e.score) parsed.score = e.score;
       }
 
       // Determine tier from topic or type

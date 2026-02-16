@@ -57,11 +57,12 @@ btnStart.addEventListener('click', async () => {
     // Create interview in Supabase
     const interviewId = await createInterview(candidate, role, keys);
     
-    // Save settings
+    // Save settings + current interview ID
     chrome.storage.local.set({
       lastCandidate: candidate,
       lastRole: role,
       lastLanguage: language,
+      currentInterviewId: interviewId,
     });
     
     // Start capture
@@ -97,12 +98,47 @@ btnStart.addEventListener('click', async () => {
 
 // Stop recording
 btnStop.addEventListener('click', async () => {
-  chrome.runtime.sendMessage({ action: 'stopCapture' }, (res) => {
-    if (res?.error) {
-      showError(res.error);
-      return;
-    }
-    showIdle();
+  btnStop.disabled = true;
+  btnStop.textContent = '⏹ Stopping...';
+  
+  // Get the current interview ID from storage
+  chrome.storage.local.get(['currentInterviewId', 'internalApiKey'], async (data) => {
+    // Stop audio capture first
+    chrome.runtime.sendMessage({ action: 'stopCapture' }, async (res) => {
+      if (res?.error) {
+        showError(res.error);
+        btnStop.disabled = false;
+        btnStop.textContent = '⏹ Stop Recording';
+        return;
+      }
+      
+      // End interview + generate scorecard (separate calls)
+      if (data.currentInterviewId && data.internalApiKey) {
+        const headers = {
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+          'x-internal-key': data.internalApiKey,
+          'Content-Type': 'application/json',
+        };
+        const body = JSON.stringify({ interviewId: data.currentInterviewId });
+        
+        try {
+          // 1. Mark interview as completed
+          await fetch(`${SUPABASE_URL}/functions/v1/end-interview`, {
+            method: 'POST', headers, body,
+          });
+          
+          // 2. Generate scorecard (separate call — Edge Functions can't call each other reliably)
+          fetch(`${SUPABASE_URL}/functions/v1/generate-scorecard`, {
+            method: 'POST', headers, body,
+          }).catch(err => console.error('Scorecard generation error:', err));
+        } catch (err) {
+          console.error('Failed to end interview:', err);
+        }
+      }
+      
+      chrome.storage.local.remove(['currentInterviewId']);
+      showIdle();
+    });
   });
 });
 
@@ -135,43 +171,29 @@ async function getKeys() {
   });
 }
 
-// Create interview record in Supabase via Edge Function
+// Create interview record via Edge Function
 async function createInterview(candidateName, role, keys) {
-  // For MVP: create via direct Supabase insert using anon key
-  // TODO: use proper auth flow
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/interviews`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/create-interview`, {
     method: 'POST',
     headers: {
-      'apikey': SUPABASE_ANON_KEY,
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      'x-internal-key': keys.internalApiKey,
       'Content-Type': 'application/json',
-      'Prefer': 'return=representation',
     },
     body: JSON.stringify({
-      candidate_name: candidateName,
-      status: 'active',
-      started_at: new Date().toISOString(),
+      candidateName,
+      role,
+      language: languageSelect.value,
     }),
   });
   
   if (!res.ok) {
-    // Fallback: use existing API route
-    const apiRes = await fetch(`${DASHBOARD_URL}/api/interviews`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-internal-key': keys.internalApiKey,
-      },
-      body: JSON.stringify({ candidateName, role }),
-    });
-    
-    if (!apiRes.ok) throw new Error('Failed to create interview');
-    const data = await apiRes.json();
-    return data.id;
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error || 'Failed to create interview');
   }
   
-  const [interview] = await res.json();
-  return interview.id;
+  const data = await res.json();
+  return data.interview.id;
 }
 
 // UI state

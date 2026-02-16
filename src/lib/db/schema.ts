@@ -29,7 +29,7 @@ export const jobPositions = pgTable('job_positions', {
 export const candidates = pgTable('candidates', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 256 }).notNull(),
-  email: varchar('email', { length: 256 }).notNull(),
+  email: varchar('email', { length: 256 }),
   phone: varchar('phone', { length: 50 }),
   cvUrl: text('cv_url'),
   cvData: jsonb('cv_data'), // Parsed CV data
