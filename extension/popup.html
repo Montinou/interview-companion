@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview Companion</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      width: 360px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0a0a0f;
+      color: #e2e8f0;
+      padding: 20px;
+    }
+    
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .header h1 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #a78bfa;
+    }
+    
+    .header .version {
+      font-size: 11px;
+      color: #64748b;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    
+    .status-badge.idle { background: #1e293b; color: #94a3b8; }
+    .status-badge.recording { background: #7f1d1d; color: #fca5a5; animation: pulse 2s infinite; }
+    .status-badge.error { background: #7f1d1d; color: #fca5a5; }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    
+    .status-badge.idle .status-dot { background: #64748b; }
+    .status-badge.recording .status-dot { background: #ef4444; }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .form-group {
+      margin-bottom: 14px;
+    }
+    
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    
+    input, select {
+      width: 100%;
+      padding: 8px 12px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 13px;
+      outline: none;
+    }
+    
+    input:focus, select:focus {
+      border-color: #a78bfa;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    
+    .btn-start {
+      background: #7c3aed;
+      color: white;
+    }
+    
+    .btn-start:hover { background: #6d28d9; }
+    .btn-start:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-stop {
+      background: #dc2626;
+      color: white;
+    }
+    
+    .btn-stop:hover { background: #b91c1c; }
+    
+    .btn-dashboard {
+      background: transparent;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      margin-top: 8px;
+      font-size: 12px;
+      padding: 8px;
+    }
+    
+    .btn-dashboard:hover { border-color: #a78bfa; color: #a78bfa; }
+    
+    .error-msg {
+      color: #fca5a5;
+      font-size: 12px;
+      margin-top: 8px;
+      display: none;
+    }
+    
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🦋 Interview Companion</h1>
+    <span class="version">v0.1.0</span>
+  </div>
+  
+  <div id="status" class="status-badge idle">
+    <span class="status-dot"></span>
+    <span id="status-text">Ready</span>
+  </div>
+  
+  <!-- Setup form (shown when idle) -->
+  <div id="setup-form">
+    <div class="form-group">
+      <label for="candidate">Candidate Name</label>
+      <input type="text" id="candidate" placeholder="e.g. Richard Acosta" />
+    </div>
+    
+    <div class="form-group">
+      <label for="role">Role</label>
+      <input type="text" id="role" placeholder="e.g. QA Automation Engineer" value="QA Automation Engineer" />
+    </div>
+    
+    <div class="form-group">
+      <label for="language">Interview Language</label>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="es">Spanish</option>
+        <option value="multi">Mixed</option>
+      </select>
+    </div>
+    
+    <button id="btn-start" class="btn btn-start" disabled>Start Recording</button>
+  </div>
+  
+  <!-- Recording panel (shown when recording) -->
+  <div id="recording-panel" class="hidden">
+    <button id="btn-stop" class="btn btn-stop">⏹ Stop Recording</button>
+  </div>
+  
+  <button id="btn-dashboard" class="btn btn-dashboard">Open Dashboard →</button>
+  
+  <p id="error-msg" class="error-msg"></p>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -18,13 +18,13 @@ class KimiProvider implements AIProvider {
   private apiKey: string
   private model: string
 
-  constructor(apiKey: string, model = "kimi-k2.5") {
+  constructor(apiKey: string, model = "kimi-k2-turbo-preview") {
     this.apiKey = apiKey
     this.model = model
   }
 
   async analyze(prompt: string, maxTokens = 1024): Promise<string> {
-    const response = await fetch("https://api.moonshot.cn/v1/chat/completions", {
+    const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -106,14 +106,14 @@ class AIManager {
 function buildAIManager(): AIManager {
   const providers: AIProvider[] = []
 
-  const kimiKey = Deno.env.get("KIMI_API_KEY")
+  const kimiKey = Deno.env.get("MOONSHOT_API_KEY")
   if (kimiKey) providers.push(new KimiProvider(kimiKey))
 
   const cerebrasKey = Deno.env.get("CEREBRAS_API_KEY")
   if (cerebrasKey) providers.push(new CerebrasProvider(cerebrasKey))
 
   if (providers.length === 0) {
-    throw new Error("No AI providers configured. Set KIMI_API_KEY or CEREBRAS_API_KEY.")
+    throw new Error("No AI providers configured. Set MOONSHOT_API_KEY or CEREBRAS_API_KEY.")
   }
 
   return new AIManager(providers)

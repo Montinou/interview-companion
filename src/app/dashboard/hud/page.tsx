@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Header from './components/Header';
 import RadarScorecard from './components/RadarScorecard';
@@ -47,11 +48,15 @@ function dbTranscriptToHud(row: any): TranscriptEntry {
 // Transform DB insight row to HUD format
 function dbInsightToHud(row: any): InsightEntry {
   const ts = new Date(row.timestamp);
-  const isSuggestion = row.type === 'suggestion';
   const parsed: Record<string, any> = {};
 
-  if (isSuggestion && row.suggestion) parsed.follow_up = row.suggestion;
+  // Map suggestion field
+  if (row.suggestion) parsed.follow_up = row.suggestion;
+  
+  // Map topic
   if (row.topic) parsed.topic = row.topic;
+  
+  // Map flags based on type
   if (row.type === 'red-flag') {
     parsed.flag = row.content;
     parsed.red_flags = [row.content];
@@ -60,10 +65,21 @@ function dbInsightToHud(row: any): InsightEntry {
     parsed.green_flags = [row.content];
     parsed.insight = row.content;
   }
+  if (row.type === 'contradiction') {
+    parsed.red_flags = [row.content];
+    parsed.flag = `⚡ ${row.content}`;
+  }
+  if (row.type === 'note' || row.type === 'suggestion') {
+    parsed.insight = row.content;
+  }
+  
+  // Map evidence, score, sentiment
   if (row.evidence) parsed.evidence = row.evidence;
   if (row.score) parsed.score = row.score;
   if (row.sentiment) parsed.sentiment = row.sentiment;
+  if (row.response_quality) parsed.response_quality = row.response_quality;
 
+  // Tier: flags and contradictions are "deep" (tier 2), rest are "fast" (tier 1)
   const tier = (row.type === 'red-flag' || row.type === 'green-flag' || row.type === 'contradiction') ? 2 : 1;
 
   return {
@@ -77,11 +93,22 @@ function dbInsightToHud(row: any): InsightEntry {
 }
 
 export default function HudPage() {
+  return (
+    <Suspense fallback={<div className="h-screen bg-[#0a0a0f] flex items-center justify-center text-gray-400">Loading HUD...</div>}>
+      <HudContent />
+    </Suspense>
+  );
+}
+
+function HudContent() {
+  const searchParams = useSearchParams();
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [insights, setInsights] = useState<InsightEntry[]>([]);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [meta, setMeta] = useState<InterviewMeta | null>(null);
-  const [interviewId, setInterviewId] = useState<number | null>(null);
+  const [interviewId, setInterviewId] = useState<number | null>(
+    searchParams?.get('interviewId') ? Number(searchParams.get('interviewId')) : null
+  );
 
   const startTimestamp = meta?.startedAt
     ? new Date(meta.startedAt).getTime() / 1000
