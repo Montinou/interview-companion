@@ -15,6 +15,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/interviews/:id/stream',          // SSE stream, protected by INTERNAL_API_KEY
   '/api/interview-data',                 // Unified endpoint, protected by INTERNAL_API_KEY
   '/api/hud(.*)',                        // HUD dashboard API routes (public)
+  '/api/extension/config',               // Extension config — auth checked inside, needs CORS
   '/dashboard/hud',                      // HUD dashboard page (public)
 ]);
 

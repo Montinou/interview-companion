@@ -144,11 +144,19 @@
   
   <div id="status" class="status-badge idle">
     <span class="status-dot"></span>
-    <span id="status-text">Ready</span>
+    <span id="status-text">Connecting...</span>
   </div>
+
+  <p id="user-name" style="display:none; font-size:12px; color:#94a3b8; margin-bottom:12px;">👤</p>
   
-  <!-- Setup form (shown when idle) -->
-  <div id="setup-form">
+  <!-- Auth panel (shown when not logged in) -->
+  <div id="auth-panel" class="hidden">
+    <p style="color:#94a3b8; font-size:13px; margin-bottom:12px;">Sign in to Interview Companion to start recording.</p>
+    <button id="btn-login" class="btn btn-start">Sign In →</button>
+  </div>
+
+  <!-- Setup form (shown when authenticated + idle) -->
+  <div id="setup-form" class="hidden">
     <div class="form-group">
       <label for="candidate">Candidate Name</label>
       <input type="text" id="candidate" placeholder="e.g. Richard Acosta" />
