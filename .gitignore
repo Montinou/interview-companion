@@ -9,3 +9,7 @@ seed-interviews.mjs
 seed-interviews.ts
 .env.vercel-check
 .env*
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
