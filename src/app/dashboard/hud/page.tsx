@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import Header from './components/Header';
 import RadarScorecard from './components/RadarScorecard';
 import SuggestionsPanel from './components/SuggestionsPanel';
@@ -30,17 +31,64 @@ export type InterviewMeta = {
   jiraTicket: string; startedAt: string | null;
 };
 
+// Transform DB transcript row to HUD format
+function dbTranscriptToHud(row: any): TranscriptEntry {
+  const ts = new Date(row.timestamp);
+  return {
+    time: ts.toISOString().substring(11, 19),
+    timestamp: ts.getTime() / 1000,
+    speaker: (row.speaker_role === 'guest' || row.speaker === 'candidate') ? 'Guest' : 'Host',
+    channel: (row.speaker_role === 'guest' || row.speaker === 'candidate') ? 1 : 0,
+    text: row.text,
+    confidence: (row.confidence || 95) / 100,
+  };
+}
+
+// Transform DB insight row to HUD format
+function dbInsightToHud(row: any): InsightEntry {
+  const ts = new Date(row.timestamp);
+  const isSuggestion = row.type === 'suggestion';
+  const parsed: Record<string, any> = {};
+
+  if (isSuggestion && row.suggestion) parsed.follow_up = row.suggestion;
+  if (row.topic) parsed.topic = row.topic;
+  if (row.type === 'red-flag') {
+    parsed.flag = row.content;
+    parsed.red_flags = [row.content];
+  }
+  if (row.type === 'green-flag') {
+    parsed.green_flags = [row.content];
+    parsed.insight = row.content;
+  }
+  if (row.evidence) parsed.evidence = row.evidence;
+  if (row.score) parsed.score = row.score;
+  if (row.sentiment) parsed.sentiment = row.sentiment;
+
+  const tier = (row.type === 'red-flag' || row.type === 'green-flag' || row.type === 'contradiction') ? 2 : 1;
+
+  return {
+    time: ts.toISOString().substring(11, 19),
+    timestamp: ts.getTime() / 1000,
+    tier,
+    trigger: row.content?.substring(0, 100) || '',
+    analysis: JSON.stringify(parsed),
+    parsed,
+  };
+}
+
 export default function HudPage() {
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [insights, setInsights] = useState<InsightEntry[]>([]);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [meta, setMeta] = useState<InterviewMeta | null>(null);
+  const [interviewId, setInterviewId] = useState<number | null>(null);
 
   const startTimestamp = meta?.startedAt
     ? new Date(meta.startedAt).getTime() / 1000
     : (transcripts[0]?.timestamp || null);
 
-  const fetchData = useCallback(async () => {
+  // Initial load via API (keeps existing HUD API routes working)
+  const fetchInitialData = useCallback(async () => {
     try {
       const [tRes, iRes, sRes] = await Promise.all([
         fetch('/api/hud/transcripts'),
@@ -50,7 +98,10 @@ export default function HudPage() {
       if (tRes.ok) {
         const d = await tRes.json();
         setTranscripts(d.transcripts || []);
-        if (d.interview) setMeta(d.interview);
+        if (d.interview) {
+          setMeta(d.interview);
+          setInterviewId(d.interview.id);
+        }
       }
       if (iRes.ok) {
         const d = await iRes.json();
@@ -60,14 +111,77 @@ export default function HudPage() {
         const d = await sRes.json();
         if (d.scorecard) setScorecard(d.scorecard);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error('Initial fetch error:', e); }
   }, []);
 
+  // Initial load
   useEffect(() => {
-    fetchData();
-    const iv = setInterval(fetchData, 2500);
-    return () => clearInterval(iv);
-  }, [fetchData]);
+    fetchInitialData();
+  }, [fetchInitialData]);
+
+  // Supabase Realtime subscriptions — once we know the interview ID
+  useEffect(() => {
+    if (!interviewId) return;
+
+    // Subscribe to new transcripts
+    const transcriptChannel = supabase
+      .channel(`transcripts-${interviewId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'transcripts',
+        filter: `interview_id=eq.${interviewId}`,
+      }, (payload) => {
+        const newEntry = dbTranscriptToHud(payload.new);
+        setTranscripts(prev => [...prev, newEntry]);
+      })
+      .subscribe();
+
+    // Subscribe to new insights
+    const insightChannel = supabase
+      .channel(`insights-${interviewId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ai_insights',
+        filter: `interview_id=eq.${interviewId}`,
+      }, (payload) => {
+        const newEntry = dbInsightToHud(payload.new);
+        setInsights(prev => [...prev, newEntry]);
+      })
+      .subscribe();
+
+    // Subscribe to scorecard changes (upsert)
+    const scorecardChannel = supabase
+      .channel(`scorecard-${interviewId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'scorecards',
+        filter: `interview_id=eq.${interviewId}`,
+      }, (payload) => {
+        const s = payload.new as any;
+        if (s) {
+          setScorecard({
+            actitud: s.attitude,
+            comunicacion: s.communication,
+            tecnico: s.technical,
+            estrategico: s.strategic,
+            liderazgo: s.leadership,
+            ingles: s.english,
+            recommendation: s.recommendation,
+            justification: s.summary,
+          });
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(transcriptChannel);
+      supabase.removeChannel(insightChannel);
+      supabase.removeChannel(scorecardChannel);
+    };
+  }, [interviewId]);
 
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0f] overflow-hidden text-gray-200">
