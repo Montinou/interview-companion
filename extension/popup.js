@@ -30,7 +30,7 @@ candidateInput.addEventListener('input', () => {
 });
 
 // Check if already recording
-chrome.runtime.sendMessage({ action: 'getStatus' }, (res) => {
+chrome.runtime.sendMessage({ target: 'background', action: 'getStatus' }, (res) => {
   if (res?.isRecording) {
     showRecording();
   }
@@ -67,6 +67,7 @@ btnStart.addEventListener('click', async () => {
     
     // Start capture
     chrome.runtime.sendMessage({
+      target: 'background',
       action: 'startCapture',
       interviewId,
       config: {
@@ -104,7 +105,7 @@ btnStop.addEventListener('click', async () => {
   // Get the current interview ID from storage
   chrome.storage.local.get(['currentInterviewId', 'internalApiKey'], async (data) => {
     // Stop audio capture first
-    chrome.runtime.sendMessage({ action: 'stopCapture' }, async (res) => {
+    chrome.runtime.sendMessage({ target: 'background', action: 'stopCapture' }, async (res) => {
       if (res?.error) {
         showError(res.error);
         btnStop.disabled = false;

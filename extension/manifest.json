@@ -27,6 +27,8 @@
     "128": "icons/icon128.png"
   },
   "host_permissions": [
-    "https://llcnkvnrsaszxwpiufbi.supabase.co/*"
+    "https://llcnkvnrsaszxwpiufbi.supabase.co/*",
+    "wss://api.deepgram.com/*",
+    "https://interview-companion.triqual.dev/*"
   ]
 }

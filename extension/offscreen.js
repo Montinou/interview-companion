@@ -20,11 +20,14 @@ let bufferTimer = null;
 const BUFFER_WINDOW_MS = 15000; // 15s buffer window
 const MIN_WORDS = 5; // minimum words before analyzing
 
+// Listen for messages from background service worker
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.action === 'offscreen:startCapture') {
+  if (msg.target !== 'offscreen') return;
+  
+  if (msg.action === 'startCapture') {
     startCapture(msg.streamId, msg.interviewId, msg.config);
   }
-  if (msg.action === 'offscreen:stopCapture') {
+  if (msg.action === 'stopCapture') {
     stopCapture();
   }
 });
@@ -82,7 +85,11 @@ async function startCapture(streamId, intId, cfg) {
     console.log('[IC] Capture started — tab + mic → Deepgram');
   } catch (err) {
     console.error('[IC] Capture start error:', err);
-    chrome.runtime.sendMessage({ action: 'captureError', error: err.message });
+    chrome.runtime.sendMessage({
+      target: 'background',
+      action: 'captureError',
+      error: err.message,
+    });
   }
 }
 
@@ -138,7 +145,11 @@ function connectDeepgram(apiKey, language) {
   
   deepgramSocket.onerror = (err) => {
     console.error('[IC] Deepgram error:', err);
-    chrome.runtime.sendMessage({ action: 'captureError', error: 'Deepgram connection error' });
+    chrome.runtime.sendMessage({
+      target: 'background',
+      action: 'captureError',
+      error: 'Deepgram connection error',
+    });
   };
   
   deepgramSocket.onclose = (event) => {
