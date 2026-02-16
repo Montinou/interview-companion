@@ -3,6 +3,8 @@
 const DASHBOARD_URL = 'https://interview-companion.triqual.dev';
 const SUPABASE_URL = 'https://llcnkvnrsaszxwpiufbi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxsY25rdm5yc2Fzenh3cGl1ZmJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEyMjk4MzMsImV4cCI6MjA4NjgwNTgzM30.j1vvokyrJLEyoVMoaaIbjPVb93f6fwWRW8YTEZk7CqU';
+const DEEPGRAM_API_KEY = 'a517229852674657a6a9ffaf3e72584dd85899b5';
+const INTERNAL_API_KEY = '074e6db412c59366b07b22804262856319ef3c657345df8ad0aac3e30a5cdb6b';
 
 // DOM elements
 const statusEl = document.getElementById('status');
@@ -18,7 +20,7 @@ const roleInput = document.getElementById('role');
 const languageSelect = document.getElementById('language');
 
 // Load saved settings
-chrome.storage.local.get(['deepgramApiKey', 'internalApiKey', 'lastCandidate', 'lastRole', 'lastLanguage'], (data) => {
+chrome.storage.local.get(['lastCandidate', 'lastRole', 'lastLanguage'], (data) => {
   if (data.lastCandidate) candidateInput.value = data.lastCandidate;
   if (data.lastRole) roleInput.value = data.lastRole;
   if (data.lastLanguage) languageSelect.value = data.lastLanguage;
@@ -51,11 +53,8 @@ btnStart.addEventListener('click', async () => {
   btnStart.textContent = 'Starting...';
   
   try {
-    // Get API keys from storage
-    const keys = await getKeys();
-    
     // Create interview in Supabase
-    const interviewId = await createInterview(candidate, role, keys);
+    const interviewId = await createInterview(candidate, role);
     
     // Save settings + current interview ID
     chrome.storage.local.set({
@@ -71,10 +70,10 @@ btnStart.addEventListener('click', async () => {
       action: 'startCapture',
       interviewId,
       config: {
-        deepgramApiKey: keys.deepgramApiKey,
+        deepgramApiKey: DEEPGRAM_API_KEY,
         supabaseUrl: SUPABASE_URL,
         supabaseAnonKey: SUPABASE_ANON_KEY,
-        internalApiKey: keys.internalApiKey,
+        internalApiKey: INTERNAL_API_KEY,
         language,
       }
     }, (res) => {
@@ -103,7 +102,7 @@ btnStop.addEventListener('click', async () => {
   btnStop.textContent = '⏹ Stopping...';
   
   // Get the current interview ID from storage
-  chrome.storage.local.get(['currentInterviewId', 'internalApiKey'], async (data) => {
+  chrome.storage.local.get(['currentInterviewId'], async (data) => {
     // Stop audio capture first
     chrome.runtime.sendMessage({ target: 'background', action: 'stopCapture' }, async (res) => {
       if (res?.error) {
@@ -114,10 +113,10 @@ btnStop.addEventListener('click', async () => {
       }
       
       // End interview + generate scorecard (separate calls)
-      if (data.currentInterviewId && data.internalApiKey) {
+      if (data.currentInterviewId) {
         const headers = {
           'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-          'x-internal-key': data.internalApiKey,
+          'x-internal-key': INTERNAL_API_KEY,
           'Content-Type': 'application/json',
         };
         const body = JSON.stringify({ interviewId: data.currentInterviewId });
@@ -148,37 +147,13 @@ btnDashboard.addEventListener('click', () => {
   chrome.tabs.create({ url: `${DASHBOARD_URL}/dashboard` });
 });
 
-// Get API keys from storage or prompt setup
-async function getKeys() {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(['deepgramApiKey', 'internalApiKey'], (data) => {
-      if (data.deepgramApiKey && data.internalApiKey) {
-        resolve(data);
-      } else {
-        // First time — prompt for keys
-        // In production, these come from the server after auth
-        const deepgramKey = prompt('Enter Deepgram API key (one-time setup):');
-        const internalKey = prompt('Enter Internal API key (one-time setup):');
-        
-        if (!deepgramKey || !internalKey) {
-          reject(new Error('API keys required'));
-          return;
-        }
-        
-        chrome.storage.local.set({ deepgramApiKey: deepgramKey, internalApiKey: internalKey });
-        resolve({ deepgramApiKey: deepgramKey, internalApiKey: internalKey });
-      }
-    });
-  });
-}
-
 // Create interview record via Edge Function
-async function createInterview(candidateName, role, keys) {
+async function createInterview(candidateName, role) {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/create-interview`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      'x-internal-key': keys.internalApiKey,
+      'x-internal-key': INTERNAL_API_KEY,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
