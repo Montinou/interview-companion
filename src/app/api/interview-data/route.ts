@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { neon } from '@neondatabase/serverless';
+import postgres from 'postgres';
 import { db } from '@/lib/db';
 import { aiInsights, transcripts, interviews, scorecards } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, sql } from 'drizzle-orm';
@@ -112,9 +112,9 @@ export async function GET(request: NextRequest) {
       }
 
       case 'plan': {
-        // Use unpooled URL (channel_binding breaks raw neon() on pooler)
+        // Use unpooled URL for raw queries
         const unpooledUrl = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL!;
-        const rawSql = neon(unpooledUrl);
+        const rawSql = postgres(unpooledUrl, { prepare: false });
         
         const sectionRows = await rawSql`
           SELECT id, name, description, duration_min, sort_order
@@ -282,7 +282,7 @@ export async function POST(request: NextRequest) {
         if (!questionId) {
           return NextResponse.json({ error: 'Missing questionId' }, { status: 400 });
         }
-        const rawSql2 = neon(process.env.DATABASE_URL!);
+        const rawSql2 = postgres(process.env.DATABASE_URL!, { prepare: false });
         await rawSql2`UPDATE interview_questions SET asked = true WHERE id = ${questionId}`;
         return NextResponse.json({ success: true });
       }

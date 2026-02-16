@@ -1,18 +1,19 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { interviews } from '@/lib/db/schema';
-import { desc } from 'drizzle-orm';
+import { interviews, candidates } from '@/lib/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export async function GET() {
   try {
     const allInterviews = await db
       .select({
         id: interviews.id,
-        candidateName: interviews.candidateName,
+        candidateName: candidates.name,
         status: interviews.status,
         createdAt: interviews.createdAt,
       })
       .from(interviews)
+      .leftJoin(candidates, eq(interviews.candidateId, candidates.id))
       .orderBy(desc(interviews.createdAt));
 
     return NextResponse.json(allInterviews);

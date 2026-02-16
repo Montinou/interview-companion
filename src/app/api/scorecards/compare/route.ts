@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { interviews, scorecards } from '@/lib/db/schema';
+import { interviews, scorecards, candidates as candidatesTable } from '@/lib/db/schema';
 import { eq, inArray } from 'drizzle-orm';
 
 export async function GET(req: NextRequest) {
@@ -22,11 +22,12 @@ export async function GET(req: NextRequest) {
     const results = await db
       .select({
         id: interviews.id,
-        candidateName: interviews.candidateName,
+        candidateName: candidatesTable.name,
         status: interviews.status,
         scorecard: scorecards,
       })
       .from(interviews)
+      .leftJoin(candidatesTable, eq(interviews.candidateId, candidatesTable.id))
       .leftJoin(scorecards, eq(interviews.id, scorecards.interviewId))
       .where(inArray(interviews.id, ids));
 
