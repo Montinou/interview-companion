@@ -4,7 +4,7 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/api/webhooks(.*)',
+  '/api/webhooks(.*)',              // Clerk + other webhooks (verified by signature)
   '/api/analyze',                        // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/active',              // Protected by INTERNAL_API_KEY, not Clerk
   '/api/interviews/:id/transcript',      // Protected by INTERNAL_API_KEY, not Clerk

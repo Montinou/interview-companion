@@ -6,6 +6,7 @@ import { currentUser } from '@clerk/nextjs/server';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { getOrgContext } from '@/lib/auth';
 
 export async function createInterview(formData: FormData) {
   const user = await currentUser();
@@ -13,6 +14,9 @@ export async function createInterview(formData: FormData) {
   if (!user) {
     throw new Error('Unauthorized');
   }
+
+  // Get organization context
+  const { orgId } = await getOrgContext();
 
   // Get or create user in DB
   let dbUser = await db.query.users.findFirst({
@@ -40,6 +44,7 @@ export async function createInterview(formData: FormData) {
 
   if (!candidate) {
     const [newCandidate] = await db.insert(candidates).values({
+      orgId,
       name: candidateName,
       email: candidateEmail,
       phone: candidatePhone,
@@ -50,6 +55,7 @@ export async function createInterview(formData: FormData) {
 
   // Create interview
   const [interview] = await db.insert(interviews).values({
+    orgId,
     candidateId: candidate.id,
     interviewerId: dbUser.id,
     status: 'scheduled',

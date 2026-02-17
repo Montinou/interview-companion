@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { aiInsights } from '@/lib/db/schema';
+import { aiInsights, interviews } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { validateApiKey, validateDualAuth, unauthorizedResponse } from '@/lib/api-auth';
 
@@ -27,8 +27,21 @@ export async function POST(
       );
     }
 
+    // Look up interview to get orgId (M2M auth, no Clerk session)
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId),
+    });
+
+    if (!interview) {
+      return NextResponse.json(
+        { error: 'Interview not found' },
+        { status: 404 }
+      );
+    }
+
     // Save insight to database
     const [insight] = await db.insert(aiInsights).values({
+      orgId: interview.orgId,
       interviewId,
       type,
       content,

@@ -3,32 +3,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { interviewProfiles, users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 // GET: List all profiles for current user
 export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { orgId, userId } = await getOrgContext();
 
-    // Get user from DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Fetch profiles
+    // Fetch profiles for this org
     const profiles = await db.query.interviewProfiles.findMany({
-      where: eq(interviewProfiles.userId, dbUser.id),
+      where: eq(interviewProfiles.orgId, orgId),
       orderBy: (profiles, { desc }) => [desc(profiles.createdAt)],
     });
 
     return NextResponse.json({ profiles });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('GET profiles error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -37,19 +29,7 @@ export async function GET() {
 // POST: Create a new profile
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user from DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
+    const { orgId, userId: dbUserId } = await getOrgContext();
 
     const body = await req.json();
     const {
@@ -75,7 +55,8 @@ export async function POST(req: NextRequest) {
     const [profile] = await db
       .insert(interviewProfiles)
       .values({
-        userId: dbUser.id,
+        orgId,
+        userId: dbUserId,
         name,
         roleType,
         seniority,
@@ -94,6 +75,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ profile }, { status: 201 });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('POST profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

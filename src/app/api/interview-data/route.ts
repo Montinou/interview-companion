@@ -183,6 +183,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
+    // Look up interview to get orgId for all inserts
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId),
+    });
+
+    if (!interview) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+    }
+
     switch (type) {
       case 'transcript': {
         // Accept either single entry or array of entries
@@ -194,6 +203,7 @@ export async function POST(request: NextRequest) {
 
         // Insert all entries
         const insertValues = entries.map((entry: any) => ({
+          orgId: interview.orgId,
           interviewId,
           timestamp: entry.timestamp ? new Date(entry.timestamp) : new Date(),
           text: entry.text || '',
@@ -213,6 +223,7 @@ export async function POST(request: NextRequest) {
         }
 
         const [insight] = await db.insert(aiInsights).values({
+          orgId: interview.orgId,
           interviewId,
           type: insightType,
           content,
@@ -240,6 +251,7 @@ export async function POST(request: NextRequest) {
           }).where(eq(scorecards.interviewId, interviewId)).returning();
         } else {
           [scorecard] = await db.insert(scorecards).values({
+            orgId: interview.orgId,
             interviewId, attitude, communication, technical, strategic, leadership, english, notes, recommendation,
           }).returning();
         }
@@ -264,6 +276,7 @@ export async function POST(request: NextRequest) {
 
         // Store the note as an insight of type 'note'
         await db.insert(aiInsights).values({
+          orgId: interview.orgId,
           interviewId,
           type: 'note',
           content: text,

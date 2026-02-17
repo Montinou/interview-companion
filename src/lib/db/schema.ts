@@ -1,7 +1,18 @@
 import { pgTable, serial, text, timestamp, integer, boolean, jsonb, varchar, real, index, pgEnum } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// Users table (synced with Clerk)
+// ── Organizations (synced from Clerk) ──────────────────────────────
+export const organizations = pgTable('organizations', {
+  id: serial('id').primaryKey(),
+  clerkOrgId: varchar('clerk_org_id', { length: 256 }).notNull().unique(),
+  name: varchar('name', { length: 256 }).notNull(),
+  slug: varchar('slug', { length: 256 }),
+  imageUrl: text('image_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+// ── Users (synced with Clerk) ──────────────────────────────────────
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   clerkId: varchar('clerk_id', { length: 256 }).notNull().unique(),
@@ -10,9 +21,22 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+// ── Organization Memberships ───────────────────────────────────────
+export const orgMemberships = pgTable('org_memberships', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  orgId: varchar('org_id', { length: 256 }).notNull(), // Clerk org ID or 'personal_<clerkUserId>'
+  role: varchar('role', { length: 50 }).notNull().default('member'), // admin, member, viewer
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => [
+  index('idx_org_memberships_org').on(table.orgId),
+  index('idx_org_memberships_user').on(table.userId),
+]);
+
 // Job Positions table
 export const jobPositions = pgTable('job_positions', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   title: varchar('title', { length: 256 }).notNull(),
   description: text('description'),
   requirements: jsonb('requirements'), // technical_skills, experience, english_level, nice_to_have
@@ -28,6 +52,7 @@ export const jobPositions = pgTable('job_positions', {
 // Interview Profiles table (reusable templates for different role types)
 export const interviewProfiles = pgTable('interview_profiles', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   userId: integer('user_id').notNull().references(() => users.id),
   name: varchar('name', { length: 256 }).notNull(),
   roleType: varchar('role_type', { length: 50 }).notNull().default('technical'), // technical, soft_skills, mixed, cultural
@@ -62,6 +87,7 @@ export const interviewProfiles = pgTable('interview_profiles', {
 // Candidates table
 export const candidates = pgTable('candidates', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   name: varchar('name', { length: 256 }).notNull(),
   email: varchar('email', { length: 256 }),
   phone: varchar('phone', { length: 50 }),
@@ -74,6 +100,7 @@ export const candidates = pgTable('candidates', {
 // Interviews table
 export const interviews = pgTable('interviews', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   candidateId: integer('candidate_id').notNull().references(() => candidates.id, { onDelete: 'cascade' }),
   interviewerId: integer('interviewer_id').notNull().references(() => users.id),
   jobPositionId: integer('job_position_id').references(() => jobPositions.id, { onDelete: 'set null' }),
@@ -97,6 +124,7 @@ export const interviews = pgTable('interviews', {
 // Transcripts table (real-time chunks from Deepgram)
 export const transcripts = pgTable('transcripts', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   interviewId: integer('interview_id').notNull().references(() => interviews.id, { onDelete: 'cascade' }),
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   text: text('text').notNull(),
@@ -106,11 +134,13 @@ export const transcripts = pgTable('transcripts', {
   confidence: integer('confidence'), // 0-100
 }, (table) => [
   index('idx_transcripts_interview_ts').on(table.interviewId, table.timestamp),
+  index('idx_transcripts_org').on(table.orgId),
 ]);
 
 // Scorecards table (post-interview AI-generated)
 export const scorecards = pgTable('scorecards', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   interviewId: integer('interview_id').notNull().references(() => interviews.id, { onDelete: 'cascade' }).unique(),
   attitude: integer('attitude'), // 1-10
   communication: integer('communication'), // 1-10
@@ -132,6 +162,7 @@ export const scorecards = pgTable('scorecards', {
 // AI Insights table (per-chunk differential analysis)
 export const aiInsights = pgTable('ai_insights', {
   id: serial('id').primaryKey(),
+  orgId: varchar('org_id', { length: 256 }).notNull(),
   interviewId: integer('interview_id').notNull().references(() => interviews.id, { onDelete: 'cascade' }),
   type: varchar('type', { length: 50 }).notNull(), // 'red-flag' | 'green-flag' | 'suggestion' | 'note' | 'contradiction' | 'sentiment'
   severity: varchar('severity', { length: 20 }), // 'critical' | 'warning' | 'info' | 'success'
@@ -148,11 +179,24 @@ export const aiInsights = pgTable('ai_insights', {
 }, (table) => [
   index('idx_insights_interview_ts').on(table.interviewId, table.timestamp),
   index('idx_insights_interview_type').on(table.interviewId, table.type),
+  index('idx_insights_org').on(table.orgId),
 ]);
 
 // Relations
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  memberships: many(orgMemberships),
+}));
+
+export const orgMembershipsRelations = relations(orgMemberships, ({ one }) => ({
+  user: one(users, {
+    fields: [orgMemberships.userId],
+    references: [users.id],
+  }),
+}));
+
 export const usersRelations = relations(users, ({ many }) => ({
   interviews: many(interviews),
+  orgMemberships: many(orgMemberships),
 }));
 
 export const jobPositionsRelations = relations(jobPositions, ({ many }) => ({
@@ -215,6 +259,12 @@ export const aiInsightsRelations = relations(aiInsights, ({ one }) => ({
 }));
 
 // Type exports
+export type Organization = typeof organizations.$inferSelect;
+export type NewOrganization = typeof organizations.$inferInsert;
+
+export type OrgMembership = typeof orgMemberships.$inferSelect;
+export type NewOrgMembership = typeof orgMemberships.$inferInsert;
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 

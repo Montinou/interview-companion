@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { transcripts } from '@/lib/db/schema';
+import { transcripts, interviews } from '@/lib/db/schema';
 import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
+import { eq } from 'drizzle-orm';
 
 /**
  * Transcript ingestion endpoint.
@@ -36,8 +37,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Look up interview to get orgId (M2M auth, no Clerk session)
+    const interview = await db.query.interviews.findFirst({
+      where: eq(interviews.id, interviewId),
+    });
+
+    if (!interview) {
+      return NextResponse.json(
+        { error: 'Interview not found' },
+        { status: 404 }
+      );
+    }
+
     // Save transcript chunk to DB (fast, <100ms)
     const [entry] = await db.insert(transcripts).values({
+      orgId: interview.orgId,
       interviewId,
       text,
       speaker,

@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
         .where(eq(scorecards.interviewId, interview.id));
     } else {
       await db.insert(scorecards).values({
+        orgId: interview.orgId,
         interviewId: interview.id,
         notes,
       });
