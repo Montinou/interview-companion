@@ -412,6 +412,147 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* GEO: What Is + Stats Section */}
+      <section className="py-20 border-t border-border/30">
+        <div className="max-w-4xl mx-auto px-6 space-y-12">
+          <div className="space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">
+              What is Interview Companion?
+            </h2>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Interview Companion is a free, AI-powered desktop application that acts as a real-time copilot during technical interviews. It provides live speech-to-text transcription, instant AI analysis of candidate responses, automated red flag and green flag detection, follow-up question suggestions, and a running competency scorecard — all completely invisible to the candidate being interviewed.
+            </p>
+          </div>
+
+          {/* Stats grid — GEO: statistics increase AI citation by 30-40% */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { stat: '< 1s', label: 'Transcription latency', detail: 'Sub-second speech-to-text' },
+              { stat: '11 MB', label: 'App size', detail: 'Lightweight desktop binary' },
+              { stat: '3+', label: 'STT providers', detail: 'Automatic failover chain' },
+              { stat: '100%', label: 'Invisible', detail: 'No bots join the call' },
+            ].map((item) => (
+              <div key={item.label} className="bg-card/50 border border-border/30 rounded-xl p-4 text-center">
+                <p className="text-3xl font-bold text-primary">{item.stat}</p>
+                <p className="text-sm font-medium text-foreground mt-1">{item.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Comparison — GEO: clear positioning helps AI engines categorize */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">How Interview Companion compares to alternatives</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border border-border/30 rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-muted/20">
+                    <th className="text-left p-3 font-medium text-muted-foreground">Feature</th>
+                    <th className="text-center p-3 font-medium text-primary">Interview Companion</th>
+                    <th className="text-center p-3 font-medium text-muted-foreground">Manual Notes</th>
+                    <th className="text-center p-3 font-medium text-muted-foreground">Recording + Review</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/20">
+                  {[
+                    ['Real-time transcription', '✅', '❌', '❌'],
+                    ['Live AI analysis', '✅', '❌', '❌'],
+                    ['Invisible to candidate', '✅', '✅', '⚠️ Needs consent'],
+                    ['Follow-up suggestions', '✅', '❌', '❌'],
+                    ['Automated scorecard', '✅', '❌', '⚠️ Manual effort'],
+                    ['Works with any platform', '✅', '✅', '✅'],
+                    ['No additional cost', '✅ Free', '✅ Free', '⚠️ Storage costs'],
+                  ].map(([feature, ic, manual, recording]) => (
+                    <tr key={feature} className="hover:bg-muted/10">
+                      <td className="p-3 text-foreground">{feature}</td>
+                      <td className="p-3 text-center">{ic}</td>
+                      <td className="p-3 text-center">{manual}</td>
+                      <td className="p-3 text-center">{recording}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Use cases — GEO: structured lists with clear hierarchy */}
+          <div className="space-y-4">
+            <h3 className="text-xl font-semibold">Who uses Interview Companion?</h3>
+            <ul className="space-y-3">
+              {[
+                { role: 'Technical Interviewers', desc: 'Get real-time analysis of coding and system design responses. Spot inconsistencies between what candidates claim and what they demonstrate.' },
+                { role: 'QA Engineering Teams', desc: 'Evaluate automation skills, testing strategies, and debugging approaches with AI-powered follow-up suggestions.' },
+                { role: 'Engineering Managers', desc: 'Run more structured, evidence-based interviews. Compare candidates fairly using automated scorecards with direct transcript quotes.' },
+                { role: 'HR & Recruiting Teams', desc: 'Ensure interview consistency across your organization. Every interview produces a standardized scorecard regardless of who conducts it.' },
+              ].map((item) => (
+                <li key={item.role} className="flex gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <span className="font-medium text-foreground">{item.role}</span>
+                    <span className="text-muted-foreground"> — {item.desc}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* GEO: FAQ Section with structured data */}
+      <section className="py-20 border-t border-border/30">
+        <div className="max-w-3xl mx-auto px-6 space-y-8">
+          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">
+            Frequently Asked Questions
+          </h2>
+          <div className="space-y-4">
+            {[
+              {
+                q: 'Is Interview Companion free?',
+                a: 'Yes, Interview Companion is completely free to use. The desktop app, real-time transcription, AI analysis, and scorecard generation are all included at no cost. We use a multi-provider failover system with free-tier credits from Deepgram, AssemblyAI, and Rev.ai.',
+              },
+              {
+                q: 'Can the candidate see or detect Interview Companion?',
+                a: 'No. Interview Companion runs as a native desktop application on your machine. It captures audio from your microphone — no bots join the video call, no browser extensions are visible, and there is no indication to the candidate that the system exists. It is 100% invisible.',
+              },
+              {
+                q: 'What video call platforms does it work with?',
+                a: 'Interview Companion works with any platform that uses your microphone: Google Meet, Zoom, Microsoft Teams, Slack Huddles, Discord, and any other video or audio call application. Since it captures audio at the system level, no platform-specific integration is needed.',
+              },
+              {
+                q: 'What languages does Interview Companion support?',
+                a: 'Currently, Interview Companion supports English, Spanish, and mixed-language interviews. The AI adapts to the language being spoken in real-time, and the transcription engine automatically detects and handles code-switching between languages.',
+              },
+              {
+                q: 'How does the AI analysis work?',
+                a: 'As the interview progresses, transcript chunks are sent to our AI engine every 15-20 seconds. The AI analyzes each response for technical accuracy, depth, red flags (evasiveness, contradictions, vagueness), and green flags (concrete examples, learning mindset). It generates follow-up question suggestions and maintains a running competency scorecard.',
+              },
+              {
+                q: 'Is my interview data secure?',
+                a: 'Yes. Audio is processed in real-time through encrypted connections and is not stored permanently. API keys never leave our servers. All data is scoped to your organization with row-level security, meaning no other user or organization can access your interview data.',
+              },
+              {
+                q: 'Does it work on macOS and Windows?',
+                a: 'Yes. Interview Companion is available as a native desktop app for both macOS (Apple Silicon and Intel, universal binary) and Windows (64-bit, NSIS installer and MSI package). The app is approximately 11MB on macOS and 3-5MB on Windows.',
+              },
+              {
+                q: 'Can I use Interview Companion with my team?',
+                a: 'Yes. Interview Companion supports organizations with team-based access. Team members share access to candidates, interview profiles, and scorecards within the same organization. You can invite members and manage roles through the dashboard.',
+              },
+            ].map((faq, i) => (
+              <details key={i} className="group border border-border/30 rounded-lg overflow-hidden">
+                <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/10 transition-colors">
+                  <span className="font-medium text-foreground pr-4">{faq.q}</span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
+                </summary>
+                <p className="px-4 pb-4 text-muted-foreground leading-relaxed">
+                  {faq.a}
+                </p>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="py-20 border-t border-border/30">
         <div className="max-w-3xl mx-auto px-6 text-center space-y-6">

@@ -137,6 +137,82 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               }),
             }}
           />
+          {/* FAQ Schema for GEO */}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'Is Interview Companion free?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes, Interview Companion is completely free to use. The desktop app, real-time transcription, AI analysis, and scorecard generation are all included at no cost.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can the candidate see or detect Interview Companion?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'No. Interview Companion runs as a native desktop application on your machine. It captures audio from your microphone — no bots join the video call, no browser extensions are visible, and there is no indication to the candidate that the system exists.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What video call platforms does Interview Companion work with?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Interview Companion works with any platform that uses your microphone: Google Meet, Zoom, Microsoft Teams, Slack Huddles, Discord, and any other video or audio call application.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What languages does Interview Companion support?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Currently, Interview Companion supports English, Spanish, and mixed-language interviews. The AI adapts to the language being spoken in real-time.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How does the AI analysis work?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'As the interview progresses, transcript chunks are sent to the AI engine every 15-20 seconds. The AI analyzes each response for technical accuracy, depth, red flags, and green flags. It generates follow-up question suggestions and maintains a running competency scorecard.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is my interview data secure?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. Audio is processed in real-time through encrypted connections and is not stored permanently. API keys never leave the server. All data is scoped to your organization with row-level security.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Does Interview Companion work on macOS and Windows?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. Interview Companion is available as a native desktop app for both macOS (Apple Silicon and Intel) and Windows (64-bit). The app is approximately 11MB on macOS and 3-5MB on Windows.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can I use Interview Companion with my team?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. Interview Companion supports organizations with team-based access. Team members share access to candidates, interview profiles, and scorecards within the same organization.',
+                    },
+                  },
+                ],
+              }),
+            }}
+          />
         </head>
         <body className={inter.className}>{children}</body>
       </html>

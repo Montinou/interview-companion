@@ -1,0 +1,113 @@
+# Interview Companion — Full Documentation
+
+> Interview Companion is a free, open-source, AI-powered desktop application for real-time technical interview analysis. Built with Tauri, Next.js, and Supabase.
+
+## Product Overview
+
+Interview Companion helps technical interviewers conduct better, fairer interviews by providing real-time AI analysis during live conversations. The system transcribes speech in sub-second latency, analyzes each candidate response for technical accuracy and behavioral signals, suggests follow-up questions, and generates automated competency scorecards.
+
+The application is designed to be completely invisible to the interview candidate. It runs as a native desktop app that captures audio from the interviewer's microphone — no bots join video calls, no extensions are visible, and there is no indication to the candidate that AI analysis is occurring.
+
+## How It Works
+
+1. **Audio Capture**: The Tauri desktop app uses the cpal Rust crate to capture audio from the default system microphone natively on macOS and Windows.
+
+2. **Transcription**: Audio is streamed via WebSocket to Deepgram's nova-3 model for real-time speech-to-text with speaker diarization. If Deepgram is unavailable, the system automatically fails over to AssemblyAI, then Rev.ai.
+
+3. **AI Analysis**: Every 15-20 seconds, accumulated transcript chunks are sent to the AI analysis engine. The AI evaluates:
+   - Technical accuracy of the candidate's response
+   - Depth and specificity (concrete examples vs. vague generalizations)
+   - Red flags: evasiveness, contradictions, blame-shifting, overselling
+   - Green flags: concrete examples, learning mindset, self-awareness, strategic thinking
+   - Suggested follow-up questions based on context
+
+4. **Dashboard**: Results appear in real-time on the web dashboard, showing:
+   - Live transcript with speaker labels
+   - AI insights timeline (red flags, green flags, suggestions)
+   - Running competency radar chart
+   - Interview guide with recommended questions
+   - Notes panel for the interviewer
+
+5. **Scorecard**: After the interview, the AI generates a comprehensive scorecard with:
+   - Scores across evaluation dimensions (technical, communication, leadership, etc.)
+   - Evidence-based strengths and weaknesses (with transcript quotes)
+   - Hiring recommendation with justification
+   - Executive summary
+
+## Technical Architecture
+
+### Desktop App (Tauri v2)
+- **Language**: Rust (backend) + TypeScript/React (frontend webview)
+- **Audio**: cpal crate for native microphone access
+- **WebSocket**: tokio-tungstenite for STT streaming
+- **Size**: ~11MB DMG (macOS universal), ~3-5MB installers (Windows)
+- **Platforms**: macOS 12+ (ARM + x86_64), Windows 10+ (x64)
+
+### Web Dashboard (Next.js)
+- **Framework**: Next.js 16+ with App Router
+- **Auth**: Clerk (organizations, invitation-only)
+- **Database**: Supabase (PostgreSQL) with Drizzle ORM
+- **Realtime**: Supabase Realtime for live updates
+- **Deploy**: Vercel (auto-deploy on git push)
+
+### AI Pipeline
+- **Primary LLM**: Kimi (Moonshot AI) — kimi-k2-turbo-preview
+- **Fallback LLMs**: Cerebras (Llama 3.3 70B) → NVIDIA (free tier)
+- **Primary STT**: Deepgram nova-3 (multichannel, diarization)
+- **Fallback STT**: AssemblyAI → Rev.ai
+
+### Infrastructure
+- **STT Proxy**: Cloudflare Workers + Durable Objects (WebSocket relay, API key protection)
+- **CV Storage**: Cloudflare R2 (S3-compatible, 10GB free)
+- **CI/CD**: GitHub Actions (cross-platform builds, auto-release)
+
+## Features
+
+### Interview Profiles
+Reusable, AI-generated interview templates. Describe a role in plain language, and the conversational AI profile builder generates:
+- Evaluation dimensions with weights
+- Structured interview phases with time allocations
+- Tailored questions with expected signals
+- Red flags and green flags specific to the role
+
+### CV Analysis
+Upload candidate CVs (PDF or Word) before the interview:
+- AI extracts experience, tech stack, education, and seniority
+- Detects pre-interview flags (timeline inconsistencies, generic content, employment gaps)
+- Matches against interview profiles using Jaccard similarity
+- Generates suggested questions based on CV content
+
+### Organization Support
+- Multi-tenancy with complete data isolation
+- Team members share candidates, profiles, and scorecards
+- Role-based access (admin, member)
+- Invitation-only sign-up
+
+### Candidate Management
+- Candidate profiles with interview history
+- CV storage and AI analysis
+- Cross-interview comparison with scorecard overlay
+
+## Pricing
+
+Interview Companion is free. The application uses free-tier credits from multiple providers:
+- Deepgram: ~577 interviews included
+- AssemblyAI: ~444 interviews included
+- Rev.ai: ~6 interviews included (backup)
+- Total: 1,000+ interviews at zero cost
+
+## Privacy and Security
+
+- Audio is processed in real-time and not permanently stored
+- All API keys are server-side only (never exposed to clients)
+- Organization-level data isolation with row-level security
+- Clerk authentication with fail-closed design
+- HTTPS everywhere, encrypted WebSocket connections
+- No data sharing with third parties
+
+## Open Source
+
+Interview Companion is open source under the MIT license.
+- Repository: https://github.com/Montinou/interview-companion
+- Issues: https://github.com/Montinou/interview-companion/issues
+- Releases: https://github.com/Montinou/interview-companion/releases

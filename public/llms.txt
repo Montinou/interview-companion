@@ -1,0 +1,47 @@
+# Interview Companion
+
+> Interview Companion is a free, AI-powered desktop application that acts as a real-time copilot during technical interviews. It provides live transcription, AI analysis, red flag detection, and automated scorecards — completely invisible to the candidate.
+
+## What It Does
+
+- **Real-time transcription**: Sub-second speech-to-text powered by Deepgram, with automatic speaker identification
+- **AI analysis**: Each candidate answer is analyzed for technical accuracy, depth, and relevance. Detects red flags (evasiveness, contradictions, vagueness) and green flags (concrete examples, learning mindset)
+- **Follow-up suggestions**: AI generates contextual follow-up questions based on what the candidate just said
+- **Live scorecard**: Competency radar chart updates in real-time as the interview progresses
+- **Multi-language**: Supports English, Spanish, and mixed-language interviews
+- **Provider failover**: Automatic failover across multiple STT and LLM providers for zero interruption
+
+## Key Facts
+
+- Free to use (no credit card required)
+- Desktop app: 11MB on macOS, 3-5MB on Windows
+- Works with any video call platform (Zoom, Google Meet, Teams, Slack, Discord)
+- 100% invisible to candidates — no bots join the call
+- Organization-based team access with data isolation
+- Audio processed in real-time, not stored permanently
+- Available for macOS (Apple Silicon + Intel) and Windows (64-bit)
+
+## Use Cases
+
+- Technical interviews (coding, system design, architecture)
+- QA automation engineer interviews
+- Engineering manager interviews
+- Behavioral and cultural fit interviews
+- Any structured interview that benefits from real-time AI assistance
+
+## Architecture
+
+- Desktop app built with Tauri (Rust backend + web frontend)
+- Transcription: Deepgram nova-3 with AssemblyAI and Rev.ai failover
+- AI analysis: Kimi (Moonshot) with Cerebras and NVIDIA failover
+- Dashboard: Next.js on Vercel with Supabase (PostgreSQL)
+- Auth: Clerk with organization-based multi-tenancy
+- STT proxy: Cloudflare Workers with Durable Objects
+
+## Links
+
+- Website: https://interview-companion.triqual.dev
+- Dashboard: https://interview-companion.triqual.dev/dashboard
+- GitHub: https://github.com/Montinou/interview-companion
+- Download macOS: https://github.com/Montinou/interview-companion/releases/latest
+- Download Windows: https://github.com/Montinou/interview-companion/releases/latest
