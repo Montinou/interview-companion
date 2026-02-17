@@ -1,5 +1,5 @@
-import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 interface ChatRequest {
   message: string;
@@ -153,10 +153,8 @@ Respond in JSON:
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Validate org context (chat is org-scoped even though it doesn't insert directly)
+    await getOrgContext();
 
     const body: ChatRequest = await req.json();
     const { message, profileDraft = {}, step = 0 } = body;
@@ -201,6 +199,9 @@ export async function POST(req: NextRequest) {
       complete: aiResponse.complete,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Profile chat error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

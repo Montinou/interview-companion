@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
     )
 
     // 1. Update interview status
+    // NOTE: org_id not needed here — this only does an UPDATE on existing interview record
     await supabase
       .from("interviews")
       .update({

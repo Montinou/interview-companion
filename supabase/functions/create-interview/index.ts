@@ -23,10 +23,17 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { candidateName, role, language, profileId } = await req.json()
+    const { candidateName, role, language, profileId, orgId } = await req.json()
 
     if (!candidateName) {
       return new Response(JSON.stringify({ error: "Missing candidateName" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    if (!orgId) {
+      return new Response(JSON.stringify({ error: "Missing orgId" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
@@ -48,7 +55,7 @@ Deno.serve(async (req) => {
     if (!candidate) {
       const { data: newCandidate, error } = await supabase
         .from("candidates")
-        .insert({ name: candidateName })
+        .insert({ name: candidateName, org_id: orgId })
         .select("id")
         .single()
 
@@ -77,7 +84,7 @@ Deno.serve(async (req) => {
     if (!position) {
       const { data: newPos } = await supabase
         .from("job_positions")
-        .insert({ title: positionTitle, department: "Engineering" })
+        .insert({ title: positionTitle, department: "Engineering", org_id: orgId })
         .select("id")
         .single()
       position = newPos
@@ -91,6 +98,7 @@ Deno.serve(async (req) => {
         interviewer_id: user.id,
         job_position_id: position?.id || null,
         profile_id: profileId || null,
+        org_id: orgId,
         status: "live",
         language: language || "en",
         started_at: new Date().toISOString(),

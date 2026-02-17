@@ -149,6 +149,8 @@ function HudContent() {
   }, [fetchInitialData]);
 
   // Fetch interview profile
+  // NOTE: Direct Supabase queries here are SAFE because interviewId is already org-scoped
+  // from getActiveInterview() (see src/lib/hud.ts which uses getOrgContext())
   useEffect(() => {
     if (!interviewId) return;
     

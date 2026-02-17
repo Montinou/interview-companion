@@ -2,32 +2,27 @@ import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { db } from '@/lib/db';
-import { interviews, candidates, users } from '@/lib/db/schema';
+import { interviews } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 export default async function InterviewsPage() {
-  const user = await currentUser();
-  
-  if (!user) {
-    redirect('/sign-in');
-  }
+  try {
+    const { orgId } = await getOrgContext();
+    const user = await currentUser();
+    
+    if (!user) {
+      redirect('/sign-in');
+    }
 
-  // Get or create user in DB
-  const dbUser = await db.query.users.findFirst({
-    where: eq(users.clerkId, user.id),
-  });
-
-  let userInterviews: any[] = [];
-  
-  if (dbUser) {
-    userInterviews = await db.query.interviews.findMany({
-      where: eq(interviews.interviewerId, dbUser.id),
+    // Get org-scoped interviews (all interviews in the organization)
+    const userInterviews = await db.query.interviews.findMany({
+      where: eq(interviews.orgId, orgId),
       with: {
         candidate: true,
       },
       orderBy: (interviews, { desc }) => [desc(interviews.createdAt)],
     });
-  }
 
   return (
     <div className="min-h-screen p-8">
@@ -104,4 +99,10 @@ export default async function InterviewsPage() {
       </div>
     </div>
   );
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect('/sign-in');
+    }
+    throw error;
+  }
 }

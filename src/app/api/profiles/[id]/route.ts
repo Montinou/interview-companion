@@ -1,19 +1,16 @@
-import { auth } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { interviewProfiles, users } from '@/lib/db/schema';
+import { interviewProfiles } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
-// GET: Get a single profile
+// GET: Get a single profile (org-scoped)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { orgId } = await getOrgContext();
 
     const { id } = await params;
     const profileId = parseInt(id);
@@ -22,20 +19,11 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }
 
-    // Get user from DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Fetch profile
+    // Fetch profile (org-scoped: all org members can see org profiles)
     const profile = await db.query.interviewProfiles.findFirst({
       where: and(
         eq(interviewProfiles.id, profileId),
-        eq(interviewProfiles.userId, dbUser.id)
+        eq(interviewProfiles.orgId, orgId)
       ),
     });
 
@@ -45,36 +33,27 @@ export async function GET(
 
     return NextResponse.json({ profile });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('GET profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// PATCH: Update a profile
+// PATCH: Update a profile (org-scoped)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { orgId } = await getOrgContext();
 
     const { id } = await params;
     const profileId = parseInt(id);
 
     if (isNaN(profileId)) {
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
-    }
-
-    // Get user from DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     const body = await req.json();
@@ -92,7 +71,7 @@ export async function PATCH(
       language,
     } = body;
 
-    // Update profile
+    // Update profile (org-scoped: all org members can edit org profiles)
     const [profile] = await db
       .update(interviewProfiles)
       .set({
@@ -112,7 +91,7 @@ export async function PATCH(
       .where(
         and(
           eq(interviewProfiles.id, profileId),
-          eq(interviewProfiles.userId, dbUser.id)
+          eq(interviewProfiles.orgId, orgId)
         )
       )
       .returning();
@@ -123,21 +102,21 @@ export async function PATCH(
 
     return NextResponse.json({ profile });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('PATCH profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// DELETE: Delete a profile
+// DELETE: Delete a profile (org-scoped)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { orgId } = await getOrgContext();
 
     const { id } = await params;
     const profileId = parseInt(id);
@@ -146,22 +125,13 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid profile ID' }, { status: 400 });
     }
 
-    // Get user from DB
-    const dbUser = await db.query.users.findFirst({
-      where: eq(users.clerkId, userId),
-    });
-
-    if (!dbUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    // Delete profile
+    // Delete profile (org-scoped: all org members can delete org profiles)
     const [deleted] = await db
       .delete(interviewProfiles)
       .where(
         and(
           eq(interviewProfiles.id, profileId),
-          eq(interviewProfiles.userId, dbUser.id)
+          eq(interviewProfiles.orgId, orgId)
         )
       )
       .returning();
@@ -172,6 +142,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('DELETE profile error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

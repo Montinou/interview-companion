@@ -3,43 +3,38 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ClipboardList, Mic, Sparkles, TrendingUp, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { db } from '@/lib/db';
-import { interviews, aiInsights, users } from '@/lib/db/schema';
+import { interviews, aiInsights } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 export default async function DashboardPage() {
-  const user = await currentUser();
-  
-  if (!user) {
-    redirect('/sign-in');
-  }
+  try {
+    const { orgId } = await getOrgContext();
+    const user = await currentUser();
+    
+    if (!user) {
+      redirect('/sign-in');
+    }
 
-  // Fetch real stats
-  const dbUser = await db.query.users.findFirst({
-    where: eq(users.clerkId, user.id),
-  });
-
-  let totalInterviews = 0;
-  let completedToday = 0;
-  let totalInsights = 0;
-
-  if (dbUser) {
+    // Fetch org-scoped stats
     const [interviewStats] = await db
       .select({ count: sql<number>`count(*)` })
       .from(interviews)
-      .where(eq(interviews.interviewerId, dbUser.id));
-    totalInterviews = Number(interviewStats.count);
+      .where(eq(interviews.orgId, orgId));
+    const totalInterviews = Number(interviewStats.count);
 
     const [todayStats] = await db
       .select({ count: sql<number>`count(*)` })
       .from(interviews)
-      .where(sql`${interviews.interviewerId} = ${dbUser.id} AND ${interviews.status} = 'completed'`);
-    completedToday = Number(todayStats.count);
+      .where(sql`${interviews.orgId} = ${orgId} AND ${interviews.status} = 'completed'`);
+    const completedToday = Number(todayStats.count);
 
+    // AI insights count (org-scoped via join)
     const [insightStats] = await db
       .select({ count: sql<number>`count(*)` })
-      .from(aiInsights);
-    totalInsights = Number(insightStats.count);
-  }
+      .from(aiInsights)
+      .where(eq(aiInsights.orgId, orgId));
+    const totalInsights = Number(insightStats.count);
 
   const features = [
     {
@@ -210,4 +205,10 @@ export default async function DashboardPage() {
       </div>
     </div>
   );
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect('/sign-in');
+    }
+    throw error;
+  }
 }

@@ -282,6 +282,7 @@ Rules:
 
     const scorecardData = {
       interview_id: interviewId,
+      org_id: interview.org_id,
       attitude: scores.attitude || null,
       communication: scores.communication || null,
       technical: scores.technical || null,

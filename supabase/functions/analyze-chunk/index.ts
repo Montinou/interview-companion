@@ -214,6 +214,7 @@ ${dims.length ? `\nEvaluation dimensions: ${dims.map((d: any) => `${d.label} (we
 
     await supabase.from("transcripts").insert({
       interview_id: interviewId,
+      org_id: interview.org_id,
       text: chunk.text,
       speaker: chunk.speaker || "unknown",
       speaker_role: speakerRole,
@@ -319,6 +320,7 @@ Rules:
       .from("ai_insights")
       .insert({
         interview_id: interviewId,
+        org_id: interview.org_id,
         type: analysis.type || "note",
         severity: analysis.severity || "info",
         content: analysis.content || "",
