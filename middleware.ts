@@ -17,6 +17,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/hud(.*)',                        // HUD dashboard API routes (public)
   '/api/extension/config',               // Extension config — auth checked inside, needs CORS
   '/dashboard/hud',                      // HUD dashboard page (public)
+  '/dashboard/profiles(.*)',              // Profile pages (public for now — auth inside)
+  '/api/profiles(.*)',                    // Profile API (auth checked inside via Clerk)
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
