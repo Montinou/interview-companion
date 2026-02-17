@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { Home, FileText, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Home, FileText, Sparkles, LayoutDashboard, Settings } from 'lucide-react';
+import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
@@ -7,6 +8,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard/interviews', label: 'Interviews', icon: FileText },
     { href: '/dashboard/profiles', label: 'Profiles', icon: Sparkles },
     { href: '/dashboard/hud', label: 'HUD', icon: LayoutDashboard },
+    { href: '/dashboard/settings/team', label: 'Team', icon: Settings },
   ];
 
   return (
@@ -34,6 +36,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   );
                 })}
               </div>
+            </div>
+
+            {/* Right side: Org Switcher + User */}
+            <div className="flex items-center gap-4">
+              <OrganizationSwitcher
+                hidePersonal={false}
+                afterCreateOrganizationUrl="/dashboard"
+                afterSelectOrganizationUrl="/dashboard"
+                afterLeaveOrganizationUrl="/dashboard"
+                appearance={{
+                  elements: {
+                    rootBox: 'flex items-center',
+                    organizationSwitcherTrigger:
+                      'px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm',
+                  },
+                }}
+              />
+              <UserButton
+                afterSignOutUrl="/"
+                appearance={{
+                  elements: {
+                    avatarBox: 'h-8 w-8',
+                  },
+                }}
+              />
             </div>
           </div>
         </div>
