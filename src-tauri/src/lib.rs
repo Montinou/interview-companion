@@ -30,6 +30,7 @@ fn list_audio_devices() -> Result<Vec<serde_json::Value>, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             start_capture,
             stop_capture,
