@@ -1,11 +1,12 @@
 import Link from 'next/link';
-import { Home, FileText, Sparkles, LayoutDashboard, Settings } from 'lucide-react';
+import { Home, FileText, Sparkles, LayoutDashboard, Settings, Users } from 'lucide-react';
 import { OrganizationSwitcher, UserButton } from '@clerk/nextjs';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: '/dashboard', label: 'Home', icon: Home },
     { href: '/dashboard/interviews', label: 'Interviews', icon: FileText },
+    { href: '/dashboard/candidates', label: 'Candidates', icon: Users },
     { href: '/dashboard/profiles', label: 'Profiles', icon: Sparkles },
     { href: '/dashboard/hud', label: 'HUD', icon: LayoutDashboard },
     { href: '/dashboard/settings/team', label: 'Team', icon: Settings },

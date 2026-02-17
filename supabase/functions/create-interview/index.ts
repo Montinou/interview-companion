@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { candidateName, role, language, profileId, orgId } = await req.json()
+    const { candidateName, role, language, profileId, orgId, interviewerId } = await req.json()
 
     if (!candidateName) {
       return new Response(JSON.stringify({ error: "Missing candidateName" }), {
@@ -44,10 +44,11 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
 
-    // 1. Find or create candidate
+    // 1. Find or create candidate (ORG-SCOPED)
     let { data: candidate } = await supabase
       .from("candidates")
       .select("id")
+      .eq("org_id", orgId)
       .ilike("name", candidateName)
       .limit(1)
       .single()
@@ -63,20 +64,45 @@ Deno.serve(async (req) => {
       candidate = newCandidate
     }
 
-    // 2. Find default user (interviewer) — for MVP, use first user
-    const { data: user } = await supabase
-      .from("users")
-      .select("id")
-      .limit(1)
-      .single()
+    // 2. Find interviewer by interviewerId or fall back to first org member
+    let user
+    if (interviewerId) {
+      const { data: specificUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", interviewerId)
+        .single()
+      user = specificUser
+    }
+    if (!user) {
+      // Fallback: find any user in this org via org_memberships
+      const { data: member } = await supabase
+        .from("org_memberships")
+        .select("user_id")
+        .eq("org_id", orgId)
+        .limit(1)
+        .single()
+      if (member) {
+        user = { id: member.user_id }
+      } else {
+        // Last resort: first user
+        const { data: anyUser } = await supabase
+          .from("users")
+          .select("id")
+          .limit(1)
+          .single()
+        user = anyUser
+      }
+    }
 
     if (!user) throw new Error("No user found. Create a user first.")
 
-    // 3. Find or create job position
+    // 3. Find or create job position (ORG-SCOPED)
     const positionTitle = role || "QA Automation Engineer"
     let { data: position } = await supabase
       .from("job_positions")
       .select("id")
+      .eq("org_id", orgId)
       .ilike("title", positionTitle)
       .limit(1)
       .single()
