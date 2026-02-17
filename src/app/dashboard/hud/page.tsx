@@ -5,10 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import Header from './components/Header';
 import RadarScorecard from './components/RadarScorecard';
-import SuggestionsPanel from './components/SuggestionsPanel';
-import InsightsTimeline from './components/InsightsTimeline';
-import NotesPanel from './components/NotesPanel';
-import TranscriptFooter from './components/TranscriptFooter';
+import UnifiedInsightsPanel from './components/UnifiedInsightsPanel';
+import AIChatPanel from './components/AIChatPanel';
+import PlanGuideTabbed from './components/PlanGuideTabbed';
+import { TranscriptModalWrapper } from '@/components/interview/TranscriptModalWrapper';
 
 export type TranscriptEntry = {
   time: string; timestamp: number; speaker: 'Host' | 'Guest';
@@ -30,6 +30,7 @@ export type Scorecard = {
 export type InterviewMeta = {
   id: number; status: string; candidateName: string;
   jiraTicket: string; startedAt: string | null;
+  candidateTitle?: string;
 };
 
 // Transform DB transcript row to HUD format
@@ -210,33 +211,60 @@ function HudContent() {
     };
   }, [interviewId]);
 
+  const isLive = meta?.status === 'active';
+
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0f] overflow-hidden text-gray-200">
-      <Header
-        candidateName={meta?.candidateName || '...'}
-        jiraTicket={meta?.jiraTicket || ''}
-        status={meta?.status || 'loading'}
-        startTime={startTimestamp}
-        transcriptCount={transcripts.length}
-        insightCount={insights.length}
-      />
-      <div className="flex-1 grid grid-cols-[25%_40%_35%] gap-2 px-2 pt-2 min-h-0">
+      {/* Header - fixed height */}
+      <div className="shrink-0">
+        <Header
+          candidateName={meta?.candidateName || '...'}
+          jiraTicket={meta?.jiraTicket || ''}
+          status={meta?.status || 'loading'}
+          startTime={startTimestamp}
+          transcriptCount={transcripts.length}
+          insightCount={insights.length}
+        />
+      </div>
+
+      {/* Main 3-column grid - fills remaining height */}
+      <div className="flex-1 min-h-0 grid grid-cols-[25%_45%_30%] gap-2 px-2 pb-2">
+        {/* LEFT COLUMN (25%) */}
         <div className="flex flex-col gap-2 min-h-0">
-          <RadarScorecard scorecard={scorecard} />
-        </div>
-        <div className="min-h-0">
-          <SuggestionsPanel insights={insights.filter(i => i.tier === 1)} />
-        </div>
-        <div className="flex flex-col gap-2 min-h-0">
-          <div className="flex-[6] min-h-0">
-            <InsightsTimeline insights={insights} />
-          </div>
+          {/* Radar Scorecard - 40% */}
           <div className="flex-[4] min-h-0">
-            <NotesPanel />
+            <RadarScorecard scorecard={scorecard} />
           </div>
+          
+          {/* Plan/Guide/Notes Tabbed - 60% */}
+          <div className="flex-[6] min-h-0">
+            <PlanGuideTabbed
+              interviewId={interviewId}
+              candidateName={meta?.candidateName || '...'}
+              candidateTitle={meta?.candidateTitle}
+              jiraTicket={meta?.jiraTicket}
+            />
+          </div>
+        </div>
+
+        {/* CENTER COLUMN (45%) - Unified Insights */}
+        <div className="min-h-0">
+          <UnifiedInsightsPanel insights={insights} />
+        </div>
+
+        {/* RIGHT COLUMN (30%) - AI Chat */}
+        <div className="min-h-0">
+          <AIChatPanel interviewId={interviewId} />
         </div>
       </div>
-      <TranscriptFooter transcripts={transcripts} />
+
+      {/* Floating Transcript Button + Modal */}
+      {interviewId && (
+        <TranscriptModalWrapper
+          interviewId={interviewId}
+          isLive={isLive}
+        />
+      )}
     </div>
   );
 }
