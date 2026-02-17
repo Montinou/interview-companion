@@ -1,74 +1,74 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+/**
+ * R2 storage client using Cloudflare API (not S3-compatible).
+ * Uses the existing CLOUDFLARE_API_TOKEN for auth.
+ * 
+ * For uploads: client uploads to our API → we stream to R2
+ * For downloads: we fetch from R2 → return to client
+ */
 
-const R2_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID!;
-const R2_ACCESS_KEY = process.env.R2_ACCESS_KEY_ID!;
-const R2_SECRET_KEY = process.env.R2_SECRET_ACCESS_KEY!;
+const CF_ACCOUNT_ID = process.env.CLOUDFLARE_ACCOUNT_ID || '1154ac48d60dfeb452e573ed0be70bd6';
+const CF_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN!;
 const R2_BUCKET = 'interview-companion-cvs';
 
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY,
-    secretAccessKey: R2_SECRET_KEY,
-  },
-});
+const R2_BASE = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/r2/buckets/${R2_BUCKET}/objects`;
 
 /**
- * Generate a pre-signed URL for uploading a CV to R2.
- * Path: {orgId}/{candidateId}/{filename}
+ * Upload a file buffer to R2.
+ * Path convention: {orgId}/{candidateId}/{filename}
  */
-export async function getUploadUrl(
+export async function uploadToR2(
   orgId: string,
   candidateId: number,
   filename: string,
+  buffer: Buffer,
   contentType: string,
-): Promise<{ uploadUrl: string; key: string }> {
+): Promise<{ key: string }> {
   const key = `${orgId}/${candidateId}/${filename}`;
 
-  const command = new PutObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: key,
-    ContentType: contentType,
+  const res = await fetch(`${R2_BASE}/${encodeURIComponent(key)}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${CF_API_TOKEN}`,
+      'Content-Type': contentType,
+    },
+    body: new Uint8Array(buffer),
   });
 
-  const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn: 300 }); // 5 min
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`R2 upload failed: ${res.status} ${text}`);
+  }
 
-  return { uploadUrl, key };
-}
-
-/**
- * Generate a pre-signed URL for downloading/reading a CV from R2.
- */
-export async function getDownloadUrl(key: string): Promise<string> {
-  const command = new GetObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: key,
-  });
-
-  return getSignedUrl(r2Client, command, { expiresIn: 3600 }); // 1 hour
+  return { key };
 }
 
 /**
  * Fetch file content from R2 as a Buffer (for server-side text extraction).
  */
 export async function getFileBuffer(key: string): Promise<Buffer> {
-  const command = new GetObjectCommand({
-    Bucket: R2_BUCKET,
-    Key: key,
+  const res = await fetch(`${R2_BASE}/${encodeURIComponent(key)}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${CF_API_TOKEN}`,
+    },
   });
 
-  const response = await r2Client.send(command);
-  const stream = response.Body as ReadableStream;
-  const reader = stream.getReader();
-  const chunks: Uint8Array[] = [];
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
+  if (!res.ok) {
+    throw new Error(`R2 download failed: ${res.status}`);
   }
 
-  return Buffer.concat(chunks);
+  const arrayBuffer = await res.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}
+
+/**
+ * Delete a file from R2.
+ */
+export async function deleteFromR2(key: string): Promise<void> {
+  await fetch(`${R2_BASE}/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${CF_API_TOKEN}`,
+    },
+  });
 }

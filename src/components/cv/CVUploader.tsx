@@ -45,38 +45,29 @@ export function CVUploader({ candidateId, onUploadComplete, onAnalysisComplete }
     setError(null);
 
     try {
-      // Step 1: Get pre-signed upload URL
+      // Step 1: Upload file via our API (server handles R2)
       setProgress('uploading');
       setUploading(true);
 
+      const formData = new FormData();
+      formData.append('file', file);
+      if (candidateId) {
+        formData.append('candidateId', String(candidateId));
+      } else {
+        formData.append('candidateName', file.name.replace(/\.[^.]+$/, ''));
+      }
+
       const uploadRes = await fetch('/api/cv/upload', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          candidateId,
-          candidateName: candidateId ? undefined : file.name.replace(/\.[^.]+$/, ''),
-          fileName: file.name,
-          contentType: file.type,
-        }),
+        body: formData,
       });
 
       if (!uploadRes.ok) {
         const err = await uploadRes.json();
-        throw new Error(err.error || 'Error al solicitar URL de subida');
+        throw new Error(err.error || 'Error al subir archivo');
       }
 
-      const { uploadUrl, key, candidateId: resolvedCandidateId } = await uploadRes.json();
-
-      // Step 2: Upload file to R2 via pre-signed URL
-      const putRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': file.type },
-        body: file,
-      });
-
-      if (!putRes.ok) {
-        throw new Error('Error al subir archivo a almacenamiento');
-      }
+      const { key, candidateId: resolvedCandidateId, mimeType } = await uploadRes.json();
 
       setProgress('uploaded');
       setUploading(false);
@@ -92,7 +83,7 @@ export function CVUploader({ candidateId, onUploadComplete, onAnalysisComplete }
         body: JSON.stringify({
           candidateId: resolvedCandidateId,
           r2Key: key,
-          mimeType: file.type,
+          mimeType: mimeType || file.type,
         }),
       });
 

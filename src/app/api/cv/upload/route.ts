@@ -1,105 +1,88 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrgContext, AuthError } from '@/lib/auth';
-import { getUploadUrl } from '@/lib/r2';
 import { db } from '@/lib/db';
 import { candidates } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
+import { uploadToR2 } from '@/lib/r2';
 
 /**
  * POST /api/cv/upload
- * 
- * Generate a pre-signed URL for uploading a CV to R2.
- * Optionally creates a new candidate if candidateId is not provided.
- * 
- * Body: { candidateId?: number, candidateName?: string, filename: string, contentType: string }
- * Returns: { uploadUrl: string, key: string, candidateId: number }
+ * Accepts multipart form data with a CV file.
+ * Uploads to R2, creates candidate if needed.
  */
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
     const { orgId } = await getOrgContext();
-    const { candidateId, candidateName, filename, contentType } = await req.json();
 
-    if (!filename || !contentType) {
-      return NextResponse.json({ error: 'Missing filename or contentType' }, { status: 400 });
+    const formData = await request.formData();
+    const file = formData.get('file') as File | null;
+    const candidateIdStr = formData.get('candidateId') as string | null;
+    const candidateName = formData.get('candidateName') as string | null;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
     // Validate file type
-    const allowedTypes = [
+    const validTypes = [
       'application/pdf',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
-      'text/plain',
     ];
-    if (!allowedTypes.includes(contentType)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Accepted: PDF, DOCX, DOC, TXT' },
-        { status: 400 },
-      );
+    if (!validTypes.includes(file.type)) {
+      return NextResponse.json({ error: 'Only PDF and Word files accepted' }, { status: 400 });
     }
 
-    let resolvedCandidateId = candidateId;
+    if (file.size > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File too large (max 10MB)' }, { status: 400 });
+    }
 
-    // If no candidateId, create a new candidate
-    if (!resolvedCandidateId) {
-      if (!candidateName) {
-        return NextResponse.json(
-          { error: 'Either candidateId or candidateName is required' },
-          { status: 400 },
-        );
-      }
+    let candidateId: number;
 
-      const [newCandidate] = await db
-        .insert(candidates)
-        .values({
-          orgId,
-          name: candidateName,
-        })
-        .returning({ id: candidates.id });
-
-      resolvedCandidateId = newCandidate.id;
-    } else {
+    if (candidateIdStr) {
       // Verify candidate belongs to this org
       const candidate = await db.query.candidates.findFirst({
-        where: and(
-          eq(candidates.id, resolvedCandidateId),
-          eq(candidates.orgId, orgId),
-        ),
+        where: and(eq(candidates.id, parseInt(candidateIdStr)), eq(candidates.orgId, orgId)),
       });
-
       if (!candidate) {
         return NextResponse.json({ error: 'Candidate not found' }, { status: 404 });
       }
+      candidateId = candidate.id;
+    } else {
+      // Create new candidate
+      const name = candidateName || file.name.replace(/\.[^.]+$/, '');
+      const [newCandidate] = await db.insert(candidates).values({
+        orgId,
+        name,
+      }).returning();
+      candidateId = newCandidate.id;
     }
 
-    // Generate pre-signed upload URL
-    const { uploadUrl, key } = await getUploadUrl(
-      orgId,
-      resolvedCandidateId,
-      filename,
-      contentType,
-    );
+    // Read file buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Save the R2 key as cv_url (will be resolved to signed URL when needed)
-    await db
-      .update(candidates)
-      .set({ cvUrl: `r2://${key}` })
-      .where(
-        and(
-          eq(candidates.id, resolvedCandidateId),
-          eq(candidates.orgId, orgId),
-        ),
-      );
+    // Upload to R2
+    const { key } = await uploadToR2(orgId, candidateId, file.name, buffer, file.type);
+
+    // Update candidate with CV URL
+    await db.update(candidates)
+      .set({ cvUrl: key })
+      .where(eq(candidates.id, candidateId));
 
     return NextResponse.json({
-      uploadUrl,
+      ok: true,
+      candidateId,
       key,
-      candidateId: resolvedCandidateId,
+      mimeType: file.type,
     });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
     console.error('CV upload error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Upload failed' },
+      { status: 500 }
+    );
   }
 }
