@@ -9,6 +9,8 @@ const isPublicRoute = createRouteMatcher([
   '/',
   '/sign-in(.*)',
   '/sign-up(.*)',
+  '/sitemap.xml',
+  '/robots.txt',
   '/api/webhooks(.*)',              // Clerk + other webhooks (verified by signature)
   // M2M routes — API key validated in handlers, no Clerk session available
   '/api/analyze',                   // Capture script → AI analysis
