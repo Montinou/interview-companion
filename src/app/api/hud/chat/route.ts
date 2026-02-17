@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { auth } from '@clerk/nextjs/server';
+import { db } from '@/lib/db';
+import { users, interviews } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,10 +12,34 @@ const supabase = createClient(
 
 export async function POST(req: NextRequest) {
   try {
+    // Verify authentication
+    const { userId: clerkId } = await auth();
+    if (!clerkId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { message, interviewId } = await req.json();
 
     if (!message || !interviewId) {
       return NextResponse.json({ error: 'Missing message or interviewId' }, { status: 400 });
+    }
+
+    // Verify the interview belongs to this user
+    const dbUser = await db.query.users.findFirst({
+      where: eq(users.clerkId, clerkId),
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 403 });
+    }
+
+    const interview = await db.query.interviews.findFirst({
+      where: and(
+        eq(interviews.id, interviewId),
+        eq(interviews.interviewerId, dbUser.id),
+      ),
+    });
+    if (!interview) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
     }
 
     // Fetch recent transcripts (last 50)

@@ -13,3 +13,4 @@ seed-interviews.ts
 # Tauri
 src-tauri/target/
 src-tauri/gen/
+qa-screenshots-*/
