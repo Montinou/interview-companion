@@ -6,7 +6,10 @@ import { isTauri, startCapture, stopCapture, getCaptureStatus, onCaptureError } 
 interface CaptureControlProps {
   interviewId: number | null;
   config: {
-    deepgramApiKey: string;
+    authToken: string;
+    sttProxyUrl?: string;
+    provider?: string;
+    model?: string;
     supabaseUrl: string;
     supabaseAnonKey: string;
     internalApiKey: string;
@@ -40,9 +43,9 @@ export default function CaptureControl({
     // Listen for errors
     let cleanup: (() => void) | undefined;
     onCaptureError((err) => {
-      setError(err.error);
+      setError(err.error || err.message || 'Unknown capture error');
       setIsRecording(false);
-      onError?.(err.error);
+      onError?.(err.error || err.message || 'Unknown capture error');
     }).then((fn) => { cleanup = fn; });
 
     return () => cleanup?.();
