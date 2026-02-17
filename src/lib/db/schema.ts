@@ -47,7 +47,9 @@ export const jobPositions = pgTable('job_positions', {
   jiraEpic: varchar('jira_epic', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_job_positions_org').on(table.orgId),
+]);
 
 // Interview Profiles table (reusable templates for different role types)
 export const interviewProfiles = pgTable('interview_profiles', {
@@ -82,7 +84,9 @@ export const interviewProfiles = pgTable('interview_profiles', {
   usageCount: integer('usage_count').default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_interview_profiles_org').on(table.orgId),
+]);
 
 // Candidates table
 export const candidates = pgTable('candidates', {
@@ -95,7 +99,10 @@ export const candidates = pgTable('candidates', {
   cvData: jsonb('cv_data'), // Parsed CV data
   jiraTicket: varchar('jira_ticket', { length: 50 }),
   createdAt: timestamp('created_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_candidates_org').on(table.orgId),
+  index('idx_candidates_email').on(table.email),
+]);
 
 // Interviews table
 export const interviews = pgTable('interviews', {
@@ -119,7 +126,10 @@ export const interviews = pgTable('interviews', {
   completedAt: timestamp('completed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_interviews_org').on(table.orgId),
+  index('idx_interviews_org_status').on(table.orgId, table.status),
+]);
 
 // Transcripts table (real-time chunks from Deepgram)
 export const transcripts = pgTable('transcripts', {
@@ -157,7 +167,9 @@ export const scorecards = pgTable('scorecards', {
   summary: text('summary'), // executive summary
   notes: text('notes'),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+}, (table) => [
+  index('idx_scorecards_org').on(table.orgId),
+]);
 
 // AI Insights table (per-chunk differential analysis)
 export const aiInsights = pgTable('ai_insights', {

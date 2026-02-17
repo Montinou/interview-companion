@@ -4,6 +4,30 @@ import { db } from '@/lib/db';
 import { aiInsights, transcripts, interviews, scorecards } from '@/lib/db/schema';
 import { eq, desc, asc, and, gt, sql } from 'drizzle-orm';
 import { validateApiKey, validateDualAuth, unauthorizedResponse } from '@/lib/api-auth';
+import { getOrgContext } from '@/lib/auth';
+
+/**
+ * Verify interview exists. For Clerk sessions, also verify org ownership.
+ * For API key auth (M2M), trusts the caller but still verifies interview exists.
+ */
+async function verifyInterviewAccess(request: NextRequest, interviewId: number) {
+  const interview = await db.query.interviews.findFirst({
+    where: eq(interviews.id, interviewId),
+  });
+  if (!interview) return null;
+
+  // If this is a Clerk session (not API key), verify org ownership
+  if (!validateApiKey(request)) {
+    try {
+      const { orgId } = await getOrgContext();
+      if (interview.orgId !== orgId) return null;
+    } catch {
+      return null;
+    }
+  }
+
+  return interview;
+}
 
 /**
  * Unified API endpoint for interview data.
@@ -32,6 +56,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Verify interview exists and caller has access
+    const interview = await verifyInterviewAccess(request, interviewId);
+    if (!interview) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+    }
     switch (type) {
       case 'transcript': {
         const after = searchParams.get('after');
@@ -183,11 +212,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Look up interview to get orgId for all inserts
-    const interview = await db.query.interviews.findFirst({
-      where: eq(interviews.id, interviewId),
-    });
-
+    // Look up interview + verify org access
+    const interview = await verifyInterviewAccess(request, interviewId);
     if (!interview) {
       return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
     }

@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { aiInsights } from '@/lib/db/schema';
+import { aiInsights, interviews } from '@/lib/db/schema';
+import { eq, and } from 'drizzle-orm';
+import { getOrgContext } from '@/lib/auth';
 
 // Use Node runtime for long-lived SSE connections (edge has 30s timeout on free tier)
 export const runtime = 'nodejs';
@@ -10,8 +12,31 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Auth check before starting stream
+  let orgId: string;
+  try {
+    const ctx = await getOrgContext();
+    orgId = ctx.orgId;
+  } catch {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const { id } = await params;
   const interviewId = parseInt(id);
+
+  // Verify interview belongs to this org
+  const interview = await db.query.interviews.findFirst({
+    where: and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)),
+  });
+  if (!interview) {
+    return new Response(JSON.stringify({ error: 'Interview not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -22,14 +47,10 @@ export async function GET(
       };
 
       const sendHeartbeat = () => {
-        // SSE comment as keepalive — clients ignore these but proxies keep connection alive
         controller.enqueue(encoder.encode(`: heartbeat\n\n`));
       };
 
-      // Send initial connection message
       send(JSON.stringify({ type: 'connected', interviewId }));
-
-      // Send retry directive so client auto-reconnects after 3s
       controller.enqueue(encoder.encode(`retry: 3000\n\n`));
 
       let lastTimestamp = new Date(0);
@@ -39,7 +60,6 @@ export async function GET(
         aborted = true;
       });
 
-      // Poll for new insights every 2 seconds, heartbeat every 15s
       let tickCount = 0;
 
       const interval = setInterval(async () => {
@@ -51,11 +71,8 @@ export async function GET(
 
         tickCount++;
 
-        // Heartbeat every ~15 seconds (every 7-8 ticks at 2s interval)
         if (tickCount % 7 === 0) {
-          try {
-            sendHeartbeat();
-          } catch {
+          try { sendHeartbeat(); } catch {
             clearInterval(interval);
             return;
           }
@@ -63,9 +80,9 @@ export async function GET(
 
         try {
           const newInsights = await db.query.aiInsights.findMany({
-            where: (insights, { and, eq, gt }) => 
-              and(
-                eq(insights.interviewId, interviewId),
+            where: (insights, { and: a, eq: e, gt }) => 
+              a(
+                e(insights.interviewId, interviewId),
                 gt(insights.timestamp, lastTimestamp)
               ),
             orderBy: (insights, { asc }) => [asc(insights.timestamp)],
@@ -80,7 +97,6 @@ export async function GET(
         }
       }, 2000);
 
-      // Cleanup on abort
       request.signal.addEventListener('abort', () => {
         clearInterval(interval);
         try { controller.close(); } catch {}
@@ -93,7 +109,7 @@ export async function GET(
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no', // Disable nginx buffering
+      'X-Accel-Buffering': 'no',
     },
   });
 }

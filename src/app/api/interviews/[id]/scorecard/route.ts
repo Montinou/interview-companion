@@ -1,15 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { scorecards, interviews } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
+
+async function verifyInterviewOrg(interviewId: number, orgId: string) {
+  const interview = await db.query.interviews.findFirst({
+    where: and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)),
+  });
+  return interview;
+}
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId } = await getOrgContext();
     const { id } = await params;
     const interviewId = parseInt(id);
+
+    if (!await verifyInterviewOrg(interviewId, orgId)) {
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+    }
 
     const scorecard = await db.query.scorecards.findFirst({
       where: eq(scorecards.interviewId, interviewId),
@@ -17,6 +30,9 @@ export async function GET(
 
     return NextResponse.json(scorecard || null);
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching scorecard:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -27,25 +43,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { orgId } = await getOrgContext();
     const { id } = await params;
     const interviewId = parseInt(id);
-    const body = await request.json();
 
-    const { attitude, communication, technical, strategic, leadership, english, notes, recommendation } = body;
-
-    // Look up interview to get orgId
-    const interview = await db.query.interviews.findFirst({
-      where: eq(interviews.id, interviewId),
-    });
-
+    const interview = await verifyInterviewOrg(interviewId, orgId);
     if (!interview) {
-      return NextResponse.json(
-        { error: 'Interview not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
     }
 
-    // Upsert: create or update
+    const body = await request.json();
+    const { attitude, communication, technical, strategic, leadership, english, notes, recommendation } = body;
+
     const existing = await db.query.scorecards.findFirst({
       where: eq(scorecards.interviewId, interviewId),
     });
@@ -55,15 +64,8 @@ export async function POST(
       [scorecard] = await db
         .update(scorecards)
         .set({
-          attitude,
-          communication,
-          technical,
-          strategic,
-          leadership,
-          english,
-          notes,
-          recommendation,
-          updatedAt: new Date(),
+          attitude, communication, technical, strategic, leadership, english,
+          notes, recommendation, updatedAt: new Date(),
         })
         .where(eq(scorecards.interviewId, interviewId))
         .returning();
@@ -73,20 +75,17 @@ export async function POST(
         .values({
           orgId: interview.orgId,
           interviewId,
-          attitude,
-          communication,
-          technical,
-          strategic,
-          leadership,
-          english,
-          notes,
-          recommendation,
+          attitude, communication, technical, strategic, leadership, english,
+          notes, recommendation,
         })
         .returning();
     }
 
     return NextResponse.json(scorecard);
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error saving scorecard:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

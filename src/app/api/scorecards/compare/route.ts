@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { interviews, scorecards, candidates as candidatesTable } from '@/lib/db/schema';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, inArray, and } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {
+    const { orgId } = await getOrgContext();
     const { searchParams } = new URL(req.url);
     const idsParam = searchParams.get('ids');
 
@@ -18,7 +20,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid interview IDs' }, { status: 400 });
     }
 
-    // Fetch interviews with their scorecards
+    // Fetch interviews scoped to this org
     const results = await db
       .select({
         id: interviews.id,
@@ -29,9 +31,8 @@ export async function GET(req: NextRequest) {
       .from(interviews)
       .leftJoin(candidatesTable, eq(interviews.candidateId, candidatesTable.id))
       .leftJoin(scorecards, eq(interviews.id, scorecards.interviewId))
-      .where(inArray(interviews.id, ids));
+      .where(and(inArray(interviews.id, ids), eq(interviews.orgId, orgId)));
 
-    // Group by interview
     const candidatesMap = new Map();
     
     results.forEach(row => {
@@ -56,10 +57,11 @@ export async function GET(req: NextRequest) {
       }
     });
 
-    const candidates = Array.from(candidatesMap.values());
-
-    return NextResponse.json({ candidates });
+    return NextResponse.json({ candidates: Array.from(candidatesMap.values()) });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Error fetching scorecards for comparison:', error);
     return NextResponse.json({ error: 'Failed to fetch scorecards' }, { status: 500 });
   }

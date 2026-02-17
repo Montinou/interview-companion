@@ -25,7 +25,8 @@ export async function GET() {
       );
     }
 
-    // Return config — keys stay server-side, extension gets them after auth
+    // Return ONLY public config. Server secrets (DEEPGRAM_API_KEY, INTERNAL_API_KEY)
+    // are NEVER exposed to clients. Tauri app uses CF proxy for STT.
     return NextResponse.json({
       ok: true,
       user: {
@@ -36,9 +37,8 @@ export async function GET() {
       config: {
         supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
         supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        deepgramApiKey: process.env.DEEPGRAM_API_KEY,
-        internalApiKey: process.env.INTERNAL_API_KEY,
         dashboardUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://interview-companion.triqual.dev',
+        sttProxyUrl: 'https://interview-stt-proxy.agusmontoya.workers.dev',
       },
     }, { headers: corsHeaders });
   } catch (error) {
