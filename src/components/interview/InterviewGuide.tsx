@@ -31,12 +31,29 @@ interface PhaseSection {
   }[];
 }
 
+interface InterviewProfile {
+  name: string;
+  seniority?: string;
+  description: string;
+  redFlags?: string[];
+  greenFlags?: string[];
+  interviewStructure?: {
+    totalDuration: number;
+    phases: {
+      name: string;
+      duration: number;
+      questions: { text: string; listenFor?: string; note?: string }[];
+    }[];
+  };
+}
+
 interface InterviewGuideProps {
   candidateName: string;
   candidateTitle?: string;
   jiraTicket?: string;
   candidateEmail?: string;
   candidatePhone?: string;
+  profile?: InterviewProfile;
 }
 
 export function InterviewGuide({ 
@@ -44,7 +61,8 @@ export function InterviewGuide({
   candidateTitle,
   jiraTicket,
   candidateEmail,
-  candidatePhone 
+  candidatePhone,
+  profile 
 }: InterviewGuideProps) {
   const [expandedPhases, setExpandedPhases] = useState<string[]>(['phase1']);
 
@@ -58,7 +76,22 @@ export function InterviewGuide({
 
   const hasValidCandidateData = candidateName && candidateName !== 'Unknown Candidate';
 
-  const phases: PhaseSection[] = [
+  // Build phases from profile if available, otherwise use hardcoded
+  const phases: PhaseSection[] = profile?.interviewStructure ? 
+    profile.interviewStructure.phases.map((phase, idx) => ({
+      id: `phase${idx + 1}`,
+      title: phase.name,
+      icon: [MessageCircle, Zap, Globe, HelpCircle, Users][idx] || BookOpen,
+      duration: `${phase.duration} min`,
+      blocks: [{
+        questions: phase.questions.map(q => ({
+          text: q.text,
+          listen: q.listenFor,
+          note: q.note
+        }))
+      }]
+    }))
+    : [
     {
       id: 'phase1',
       title: 'Intro',
@@ -198,7 +231,7 @@ export function InterviewGuide({
     }
   ];
 
-  const redFlags = [
+  const redFlags = profile?.redFlags || [
     'Assumes QA is to blame for prod bugs',
     'Only wants to script, doesn\'t understand business',
     'English below C1',
@@ -206,7 +239,7 @@ export function InterviewGuide({
     'Contradicts CV in interview'
   ];
 
-  const greenFlags = [
+  const greenFlags = profile?.greenFlags || [
     'Stability in previous roles',
     'Led technical initiatives',
     'Mentored team members',

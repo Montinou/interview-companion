@@ -12,6 +12,7 @@ interface PlanGuideTabbedProps {
   candidateName: string;
   candidateTitle?: string;
   jiraTicket?: string;
+  profile?: any;
 }
 
 export default function PlanGuideTabbed({
@@ -19,6 +20,7 @@ export default function PlanGuideTabbed({
   candidateName,
   candidateTitle,
   jiraTicket,
+  profile,
 }: PlanGuideTabbedProps) {
   const [activeTab, setActiveTab] = useState<Tab>('plan');
 
@@ -66,6 +68,7 @@ export default function PlanGuideTabbed({
               candidateName={candidateName}
               candidateTitle={candidateTitle}
               jiraTicket={jiraTicket}
+              profile={profile}
             />
           </div>
         )}

@@ -22,10 +22,16 @@ const RECS = [
   { key: 'strong_no', label: 'Strong No', color: 'bg-red-600' },
 ];
 
-type Props = { scorecard: Scorecard | null };
+type Props = { 
+  scorecard: Scorecard | null;
+  dimensions?: { key: string; label: string }[];
+};
 
-export default function RadarScorecard({ scorecard }: Props) {
-  const data = DIMS.map(d => ({
+export default function RadarScorecard({ scorecard, dimensions }: Props) {
+  // Use provided dimensions or fall back to hardcoded DIMS
+  const activeDims = dimensions || DIMS;
+
+  const data = activeDims.map(d => ({
     dim: d.label,
     value: scorecard ? (scorecard as Record<string, any>)[d.key] || 0 : 0,
     fullMark: 10,

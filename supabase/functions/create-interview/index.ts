@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { candidateName, role, language } = await req.json()
+    const { candidateName, role, language, profileId } = await req.json()
 
     if (!candidateName) {
       return new Response(JSON.stringify({ error: "Missing candidateName" }), {
@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
         candidate_id: candidate!.id,
         interviewer_id: user.id,
         job_position_id: position?.id || null,
+        profile_id: profileId || null,
         status: "live",
         language: language || "en",
         started_at: new Date().toISOString(),
@@ -98,6 +99,15 @@ Deno.serve(async (req) => {
       .single()
 
     if (intErr) throw new Error(`Failed to create interview: ${intErr.message}`)
+
+    // 5. Increment profile usage_count if profileId provided
+    if (profileId) {
+      await supabase.rpc("increment_profile_usage", { profile_id: profileId })
+        .catch((err: Error) => {
+          console.warn("Failed to increment profile usage:", err.message)
+          // Non-critical: don't fail the whole request
+        })
+    }
 
     return new Response(
       JSON.stringify({ ok: true, interview }),

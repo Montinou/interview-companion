@@ -107,6 +107,7 @@ function HudContent() {
   const [insights, setInsights] = useState<InsightEntry[]>([]);
   const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [meta, setMeta] = useState<InterviewMeta | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
   const [interviewId, setInterviewId] = useState<number | null>(
     searchParams?.get('interviewId') ? Number(searchParams.get('interviewId')) : null
   );
@@ -146,6 +147,42 @@ function HudContent() {
   useEffect(() => {
     fetchInitialData();
   }, [fetchInitialData]);
+
+  // Fetch interview profile
+  useEffect(() => {
+    if (!interviewId) return;
+    
+    const fetchProfile = async () => {
+      try {
+        const { data: interview } = await supabase
+          .from('interviews')
+          .select('profile_id, profile_override')
+          .eq('id', interviewId)
+          .single();
+
+        if (interview?.profile_id) {
+          const { data: profileData } = await supabase
+            .from('interview_profiles')
+            .select('*')
+            .eq('id', interview.profile_id)
+            .single();
+
+          if (profileData) {
+            // Merge override with profile
+            const mergedProfile = {
+              ...profileData,
+              ...(interview.profile_override || {}),
+            };
+            setProfile(mergedProfile);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch profile:', e);
+      }
+    };
+
+    fetchProfile();
+  }, [interviewId]);
 
   // Supabase Realtime subscriptions — once we know the interview ID
   useEffect(() => {
@@ -233,7 +270,10 @@ function HudContent() {
         <div className="flex flex-col gap-2 min-h-0">
           {/* Radar Scorecard - 40% */}
           <div className="flex-[4] min-h-0">
-            <RadarScorecard scorecard={scorecard} />
+            <RadarScorecard 
+              scorecard={scorecard} 
+              dimensions={profile?.evaluationDimensions} 
+            />
           </div>
           
           {/* Plan/Guide/Notes Tabbed - 60% */}
@@ -243,6 +283,7 @@ function HudContent() {
               candidateName={meta?.candidateName || '...'}
               candidateTitle={meta?.candidateTitle}
               jiraTicket={meta?.jiraTicket}
+              profile={profile}
             />
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, boolean, jsonb, varchar, real, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, integer, boolean, jsonb, varchar, real, index, pgEnum } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Users table (synced with Clerk)
@@ -25,6 +25,40 @@ export const jobPositions = pgTable('job_positions', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
+// Interview Profiles table (reusable templates for different role types)
+export const interviewProfiles = pgTable('interview_profiles', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id),
+  name: varchar('name', { length: 256 }).notNull(),
+  roleType: varchar('role_type', { length: 50 }).notNull().default('technical'), // technical, soft_skills, mixed, cultural
+  seniority: varchar('seniority', { length: 50 }), // junior, mid, senior, lead, staff
+  language: varchar('language', { length: 10 }).default('en'),
+
+  // User input
+  description: text('description').notNull(),
+  techStack: jsonb('tech_stack').$type<string[]>(), // ["React", "TypeScript", "Next.js"]
+
+  // AI-generated (editable after generation)
+  evaluationDimensions: jsonb('evaluation_dimensions').$type<{ key: string; label: string; weight: number }[]>(),
+  interviewStructure: jsonb('interview_structure').$type<{
+    totalDuration: number;
+    phases: {
+      name: string;
+      duration: number;
+      questions: { text: string; listenFor?: string; note?: string }[];
+    }[];
+  }>(),
+  analysisInstructions: text('analysis_instructions'), // injected into analyze-chunk prompt
+  redFlags: jsonb('red_flags').$type<string[]>(),
+  greenFlags: jsonb('green_flags').$type<string[]>(),
+
+  // Meta
+  isTemplate: boolean('is_template').default(true),
+  usageCount: integer('usage_count').default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 // Candidates table
 export const candidates = pgTable('candidates', {
   id: serial('id').primaryKey(),
@@ -43,6 +77,8 @@ export const interviews = pgTable('interviews', {
   candidateId: integer('candidate_id').notNull().references(() => candidates.id, { onDelete: 'cascade' }),
   interviewerId: integer('interviewer_id').notNull().references(() => users.id),
   jobPositionId: integer('job_position_id').references(() => jobPositions.id, { onDelete: 'set null' }),
+  profileId: integer('profile_id').references(() => interviewProfiles.id, { onDelete: 'set null' }),
+  profileOverride: jsonb('profile_override'), // per-interview customization (merged with profile)
   status: varchar('status', { length: 50 }).notNull().default('scheduled'), // scheduled, live, completed, cancelled
   // v2: Speaker role mapping from Deepgram diarization
   roles: jsonb('roles'), // {"host": "speaker_0", "guest": "speaker_1"}
@@ -83,6 +119,7 @@ export const scorecards = pgTable('scorecards', {
   leadership: integer('leadership'), // 1-10
   english: integer('english'), // 1-10
   // v2: AI-generated scorecard fields
+  dimensions: jsonb('dimensions').$type<Record<string, number>>(), // dynamic scoring: {"react": 8, "typescript": 7, ...}
   overallScore: real('overall_score'), // weighted average
   recommendation: text('recommendation'), // hire, no_hire, maybe + justification
   strengths: jsonb('strengths'), // ["strength with evidence", ...]
@@ -122,6 +159,14 @@ export const jobPositionsRelations = relations(jobPositions, ({ many }) => ({
   interviews: many(interviews),
 }));
 
+export const interviewProfilesRelations = relations(interviewProfiles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [interviewProfiles.userId],
+    references: [users.id],
+  }),
+  interviews: many(interviews),
+}));
+
 export const candidatesRelations = relations(candidates, ({ many }) => ({
   interviews: many(interviews),
 }));
@@ -138,6 +183,10 @@ export const interviewsRelations = relations(interviews, ({ one, many }) => ({
   jobPosition: one(jobPositions, {
     fields: [interviews.jobPositionId],
     references: [jobPositions.id],
+  }),
+  profile: one(interviewProfiles, {
+    fields: [interviews.profileId],
+    references: [interviewProfiles.id],
   }),
   transcripts: many(transcripts),
   scorecard: one(scorecards),
@@ -171,6 +220,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type JobPosition = typeof jobPositions.$inferSelect;
 export type NewJobPosition = typeof jobPositions.$inferInsert;
+
+export type InterviewProfile = typeof interviewProfiles.$inferSelect;
+export type NewInterviewProfile = typeof interviewProfiles.$inferInsert;
 
 export type Candidate = typeof candidates.$inferSelect;
 export type NewCandidate = typeof candidates.$inferInsert;

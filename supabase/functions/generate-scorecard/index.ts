@@ -135,6 +135,34 @@ Deno.serve(async (req) => {
       })
     }
 
+    // 1.5. Load profile if exists
+    let profileContext = ""
+    let profileDimensions: any[] = []
+    if (interview.profile_id) {
+      const { data: profile } = await supabase
+        .from("interview_profiles")
+        .select("*")
+        .eq("id", interview.profile_id)
+        .single()
+
+      if (profile) {
+        const override = interview.profile_override || {}
+        const instructions = override.analysis_instructions || profile.analysis_instructions || ""
+        const redFlags = override.red_flags || profile.red_flags || []
+        const greenFlags = override.green_flags || profile.green_flags || []
+        const dims = override.evaluation_dimensions || profile.evaluation_dimensions || []
+        profileDimensions = dims
+
+        profileContext = `
+Role Profile: ${profile.name} (${profile.seniority || "unspecified"} level)
+${instructions ? `\nAnalysis Focus:\n${instructions}` : ""}
+${redFlags.length ? `\nRed flags to watch for:\n${redFlags.map((f: string) => `- ${f}`).join("\n")}` : ""}
+${greenFlags.length ? `\nGreen flags to look for:\n${greenFlags.map((f: string) => `- ${f}`).join("\n")}` : ""}
+${dims.length ? `\nEvaluation dimensions: ${dims.map((d: any) => `${d.label} (weight: ${d.weight})`).join(", ")}` : ""}
+`
+      }
+    }
+
     // 2. Get full transcript (ordered by timestamp)
     const { data: transcriptRows } = await supabase
       .from("transcripts")
@@ -177,11 +205,26 @@ Deno.serve(async (req) => {
     // 6. Generate scorecard with AI (uses full transcript — this is the ONE time we send everything)
     const ai = getAIProvider()
 
+    // Build dynamic score format based on profile dimensions
+    let scoreFormat = `{
+    "attitude": 1-10,
+    "communication": 1-10,
+    "technical": 1-10,
+    "strategic": 1-10,
+    "leadership": 1-10,
+    "english": 1-10
+  }`
+    if (profileDimensions.length > 0) {
+      const dimScores = profileDimensions.map((d: any) => `    "${d.key}": 1-10`).join(",\n")
+      scoreFormat = `{\n${dimScores}\n  }`
+    }
+
     const prompt = `You are generating a final scorecard for a technical interview.
 
 Candidate: ${candidateName}
 Role: ${role}
 Duration: ${transcriptRows.length} transcript segments
+${profileContext}
 
 Red flags detected during interview (${redFlags.length}):
 ${redFlags.map((f: { content: string; evidence: string }) => `- ${f.content} (evidence: "${f.evidence || "n/a"}")`).join("\n") || "None"}
@@ -199,14 +242,7 @@ Generate a comprehensive scorecard. Respond in JSON:
 {
   "overall_score": 1-10,
   "recommendation": "hire|no_hire|maybe",
-  "scores": {
-    "attitude": 1-10,
-    "communication": 1-10,
-    "technical": 1-10,
-    "strategic": 1-10,
-    "leadership": 1-10,
-    "english": 1-10
-  },
+  "scores": ${scoreFormat},
   "strengths": ["strength with evidence quote", ...],
   "weaknesses": ["weakness with evidence quote", ...],
   "summary": "3-4 sentence executive summary",
@@ -252,6 +288,7 @@ Rules:
       strategic: scores.strategic || null,
       leadership: scores.leadership || null,
       english: scores.english || null,
+      dimensions: scores, // Save all scores (dynamic or fixed) to dimensions JSONB
       overall_score: scorecard.overall_score || null,
       recommendation: `${scorecard.recommendation || "maybe"}: ${scorecard.notes || ""}`,
       strengths: scorecard.strengths || [],

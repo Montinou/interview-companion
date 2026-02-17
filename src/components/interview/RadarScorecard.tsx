@@ -26,9 +26,10 @@ const RECS = [
 interface RadarScorecardProps {
   interviewId: number;
   isLive: boolean;
+  dimensions?: { key: string; label: string }[];
 }
 
-export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
+export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScorecardProps) {
   const [scorecard, setScorecard] = useState<Record<string, any> | null>(null);
 
   const fetchScorecard = useCallback(async () => {
@@ -49,9 +50,12 @@ export function RadarScorecard({ interviewId, isLive }: RadarScorecardProps) {
     }
   }, [fetchScorecard, isLive]);
 
-  const data = DIMS.map(d => ({
+  // Use provided dimensions or fall back to hardcoded DIMS
+  const activeDims = dimensions || DIMS;
+
+  const data = activeDims.map(d => ({
     dim: d.label,
-    value: scorecard ? (scorecard[d.key] || scorecard[d.esKey] || 0) : 0,
+    value: scorecard ? (scorecard[d.key] || (d as any).esKey && scorecard[(d as any).esKey] || 0) : 0,
     fullMark: 10,
   }));
 

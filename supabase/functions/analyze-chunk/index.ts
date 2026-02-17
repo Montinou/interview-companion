@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
     // 1. Get interview metadata
     const { data: interview, error: intErr } = await supabase
       .from("interviews")
-      .select("id, candidate_id, job_position_id, roles, roles_assigned, status")
+      .select("id, candidate_id, job_position_id, profile_id, profile_override, roles, roles_assigned, status")
       .eq("id", interviewId)
       .single()
 
@@ -180,6 +180,32 @@ Deno.serve(async (req) => {
           .eq("id", interview.job_position_id)
           .single()
       : { data: null }
+
+    // 3.5. Load profile if exists
+    let profileContext = ""
+    if (interview.profile_id) {
+      const { data: profile } = await supabase
+        .from("interview_profiles")
+        .select("*")
+        .eq("id", interview.profile_id)
+        .single()
+
+      if (profile) {
+        const override = interview.profile_override || {}
+        const instructions = override.analysis_instructions || profile.analysis_instructions || ""
+        const redFlags = override.red_flags || profile.red_flags || []
+        const greenFlags = override.green_flags || profile.green_flags || []
+        const dims = override.evaluation_dimensions || profile.evaluation_dimensions || []
+
+        profileContext = `
+Role Profile: ${profile.name} (${profile.seniority || "unspecified"} level)
+${instructions ? `\nAnalysis Focus:\n${instructions}` : ""}
+${redFlags.length ? `\nRed flags to watch for:\n${redFlags.map((f: string) => `- ${f}`).join("\n")}` : ""}
+${greenFlags.length ? `\nGreen flags to look for:\n${greenFlags.map((f: string) => `- ${f}`).join("\n")}` : ""}
+${dims.length ? `\nEvaluation dimensions: ${dims.map((d: any) => `${d.label} (weight: ${d.weight})`).join(", ")}` : ""}
+`
+      }
+    }
 
     // 4. Save transcript chunk
     const speakerRole = interview.roles && interview.roles_assigned
@@ -219,9 +245,29 @@ Last summary: ${lastInsight.content || "none"}`
     // 7. Call AI (differential analysis: chunk + previous state)
     const ai = buildAIManager()
 
+    // Build dynamic score format based on profile dimensions
+    let scoreFormat = '{"technical": 1-10, "communication": 1-10, "experience": 1-10}'
+    if (interview.profile_id && profileContext) {
+      const { data: profile } = await supabase
+        .from("interview_profiles")
+        .select("evaluation_dimensions, profile_override")
+        .eq("id", interview.profile_id)
+        .single()
+
+      if (profile) {
+        const override = interview.profile_override || {}
+        const dims = override.evaluation_dimensions || profile.evaluation_dimensions || []
+        if (dims.length > 0) {
+          const dimKeys = dims.map((d: any) => `"${d.key}": 1-10`).join(", ")
+          scoreFormat = `{${dimKeys}}`
+        }
+      }
+    }
+
     const prompt = `You are a technical interview analysis copilot. Analyze this new transcript chunk in context of the interview state.
 
 Candidate: ${candidate?.name || "Unknown"} — Role: ${jobPosition?.title || "Unknown"}
+${profileContext}
 
 ${previousState}
 
@@ -238,7 +284,7 @@ Analyze ONLY what's new in this chunk. Respond in JSON:
   "topic": "topic category being discussed",
   "evidence": "exact quote from the chunk that supports your analysis",
   "response_quality": 1-10,
-  "score": {"technical": 1-10, "communication": 1-10, "experience": 1-10}
+  "score": ${scoreFormat}
 }
 
 Rules:
