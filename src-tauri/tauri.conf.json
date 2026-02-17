@@ -23,7 +23,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' https://llcnkvnrsaszxwpiufbi.supabase.co wss://api.deepgram.com https://interview-companion.triqual.dev https://*.clerk.accounts.dev; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:"
+      "csp": "default-src 'self'; connect-src 'self' https://llcnkvnrsaszxwpiufbi.supabase.co wss://interview-stt-proxy.agusmontoya.workers.dev https://interview-stt-proxy.agusmontoya.workers.dev https://interview-companion.triqual.dev https://*.clerk.accounts.dev; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:"
     }
   },
   "bundle": {
@@ -45,13 +45,5 @@
       "digestAlgorithm": "sha256",
       "timestampUrl": ""
     }
-  },
-  "updater": {
-    "active": true,
-    "endpoints": [
-      "https://github.com/Montinou/interview-companion/releases/latest/download/latest.json"
-    ],
-    "dialog": true,
-    "pubkey": ""
   }
 }
