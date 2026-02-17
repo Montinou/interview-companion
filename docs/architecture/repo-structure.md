@@ -1,0 +1,191 @@
+# Interview Companion v2 — Repository Structure
+
+## Root Directory Layout
+
+**Interview Companion v2 monorepo** contains Next.js frontend, Tauri desktop app, Supabase functions, and database schema in a single repository. Root-level config files: `package.json` (pnpm workspace), `tsconfig.json` (TypeScript compiler), `tailwind.config.ts` (CSS framework), `drizzle.config.ts` (ORM migrations), `next.config.ts` (framework settings). The `.env.local` file stores development credentials (DATABASE_URL, CLERK keys, DEEPGRAM_API_KEY). Production uses `.env.production` for Vercel deployment. The repo uses `.gitignore` to exclude `node_modules/`, `.next/`, `src-tauri/target/`, and environment files.
+
+```
+interview-companion-v2/
+├── src/                    # Next.js application
+├── src-tauri/              # Rust desktop app
+├── supabase/               # Edge Functions
+├── drizzle/                # Database migrations
+├── package.json            # Dependencies
+└── .env.local              # Dev credentials
+```
+
+**Summary:** Monorepo structure with Next.js frontend, Tauri backend, Supabase functions, and shared config files.
+
+## Next.js App Directory
+
+**src/app/** follows Next.js 16 App Router conventions with server components as default. Route structure: `dashboard/` (authenticated pages), `sign-in/` and `sign-up/` (Clerk auth), `api/` (API routes). The `dashboard/hud/page.tsx` renders ultrawide live interview view. Subdirectories: `dashboard/interviews/` (list, detail, new), `dashboard/compare/` (candidate comparison). The `layout.tsx` file wraps all pages with ClerkProvider and global styles. API routes in `api/interviews/` handle CRUD operations with Supabase client.
+
+```
+src/app/
+├── layout.tsx              # Root layout + Clerk
+├── page.tsx                # Landing page
+├── dashboard/              # Authenticated routes
+│   ├── page.tsx            # Dashboard home
+│   ├── hud/                # Live interview HUD
+│   ├── interviews/         # Interview CRUD
+│   └── compare/            # Candidate comparison
+├── sign-in/[[...sign-in]]/ # Clerk sign-in
+├── sign-up/[[...sign-up]]/ # Clerk sign-up
+└── api/                    # API routes
+    ├── interviews/         # Interview endpoints
+    ├── analyze/            # Analysis trigger
+    └── hud/                # HUD data endpoints
+```
+
+**Summary:** App Router structure with dashboard routes, Clerk auth pages, API endpoints, and live HUD layout.
+
+## Tauri Source Directory
+
+**src-tauri/src/** contains Rust modules for native desktop functionality. The `lib.rs` file defines 4 Tauri commands: `start_capture`, `stop_capture`, `get_capture_status`, `list_audio_devices`. The `audio.rs` module implements cpal audio capture, Deepgram WebSocket, and transcript processing. The `main.rs` file initializes Tauri app with plugin system. Build artifacts go to `target/debug/` (dev) and `target/release/` (production). The `Cargo.toml` declares dependencies: cpal, tokio, tokio-tungstenite, reqwest, serde_json, anyhow, lazy_static, chrono.
+
+```
+src-tauri/
+├── src/
+│   ├── lib.rs              # Tauri commands
+│   ├── audio.rs            # Audio capture logic
+│   └── main.rs             # App entry point
+├── Cargo.toml              # Rust dependencies
+├── build.rs                # Build script
+├── tauri.conf.json         # Tauri config
+└── target/                 # Build artifacts
+    ├── debug/              # Development builds
+    └── release/            # Production builds
+```
+
+**Summary:** Rust modules for Tauri commands with audio capture, WebSocket handling, and build configuration.
+
+## Supabase Functions Directory
+
+**supabase/functions/** contains 4 Deno Edge Functions deployed to Supabase. Each function has an `index.ts` entry point with Deno.serve handler. The `analyze-chunk/` function runs per-utterance AI analysis with Kimi/Cerebras failover. The `generate-scorecard/` function aggregates transcripts into hiring recommendation. The `create-interview/` and `end-interview/` functions manage interview lifecycle. Each function imports `@supabase/supabase-js@2` from JSR and `@supabase/functions-js/edge-runtime.d.ts` for types. Local testing: `supabase functions serve analyze-chunk`.
+
+```
+supabase/functions/
+├── analyze-chunk/
+│   └── index.ts            # Per-chunk AI analysis
+├── generate-scorecard/
+│   └── index.ts            # Post-interview summary
+├── create-interview/
+│   └── index.ts            # Start interview session
+└── end-interview/
+    └── index.ts            # End interview session
+```
+
+**Summary:** Four Deno Edge Functions for interview lifecycle and AI analysis with JSR package imports.
+
+## Database Schema Directory
+
+**src/lib/db/** defines Drizzle ORM schema and database connection. The `schema.ts` file declares 8 tables with relations: users (Clerk sync), candidates, interviews, transcripts, ai_insights, scorecards, job_positions. The `index.ts` file exports drizzle client with postgres.js driver. Migration files live in `drizzle/` directory as SQL files generated by Drizzle Kit. Schema uses pgTable for table definitions, serial for auto-increment IDs, varchar/text for strings, integer for numbers, jsonb for structured data, timestamp for dates.
+
+```
+src/lib/db/
+├── schema.ts               # Drizzle table definitions
+│   ├── users               # 4 columns
+│   ├── candidates          # 6 columns
+│   ├── interviews          # 13 columns
+│   ├── transcripts         # 7 columns
+│   ├── ai_insights         # 11 columns
+│   ├── scorecards          # 11 columns
+│   └── job_positions       # 10 columns
+└── index.ts                # Database client
+```
+
+**Summary:** Drizzle ORM schema with 8 tables and relations for interview data model with postgres.js driver.
+
+## Component Library Directory
+
+**src/components/** houses reusable React components shared across routes. The `ui-button.tsx`, `ui-card.tsx`, `ui-badge.tsx` files provide Shadcn/ui primitives with CVA variants. The `InsightCard.tsx` component renders AI insights with severity colors and Framer Motion animations. The `StatsCard.tsx` displays interview metrics. HUD-specific components live in `app/dashboard/hud/components/`: `Header.tsx`, `TranscriptFooter.tsx`, `NotesPanel.tsx`, `SuggestionsPanel.tsx`, `InsightsTimeline.tsx`, `RadarScorecard.tsx`. All components use TypeScript with prop types and Tailwind CSS for styling.
+
+```
+src/components/
+├── ui-button.tsx           # Button primitive (CVA)
+├── ui-card.tsx             # Card primitive (CVA)
+├── ui-badge.tsx            # Badge primitive (CVA)
+├── InsightCard.tsx         # AI insight display
+└── StatsCard.tsx           # Metric display
+
+src/app/dashboard/hud/components/
+├── Header.tsx              # HUD header bar
+├── TranscriptFooter.tsx    # Live transcript feed
+├── NotesPanel.tsx          # Note taking panel
+├── SuggestionsPanel.tsx    # AI follow-up questions
+├── InsightsTimeline.tsx    # Insight cards timeline
+└── RadarScorecard.tsx      # 6-dimension skill radar
+```
+
+**Summary:** Reusable UI components with Shadcn/ui primitives and HUD-specific components for live interview dashboard.
+
+## Lib Utilities Directory
+
+**src/lib/** contains utility modules for common functionality. The `api-auth.ts` file validates internal API keys for Edge Function calls. The `tauri/client.ts` module wraps Tauri API with TypeScript types for `invoke` calls. The `supabase/client.ts` exports Supabase client with browser credentials. The `utils.ts` file provides helper functions like `cn()` for Tailwind class merging. The `hud.ts` file exports HUD-specific utilities for layout calculations and ultrawide screen detection.
+
+```
+src/lib/
+├── api-auth.ts             # Internal API key validation
+├── db/                     # Database schema + client
+├── supabase/
+│   └── client.ts           # Supabase browser client
+├── tauri/
+│   └── client.ts           # Tauri command wrappers
+├── hud.ts                  # HUD utilities
+└── utils.ts                # General helpers (cn, etc.)
+```
+
+**Summary:** Utility modules for auth, database, Supabase client, Tauri commands, and helper functions.
+
+## Configuration Files
+
+**Root-level config files** control build tools and frameworks. The `next.config.ts` file enables Turbopack and output configuration. The `tailwind.config.ts` defines custom theme colors and dark mode. The `tsconfig.json` sets strict TypeScript options with ESM module resolution. The `drizzle.config.ts` points to schema and database URL. The `postcss.config.mjs` loads Tailwind CSS plugin. The `package.json` defines scripts: `dev` (Next dev), `tauri:dev` (Tauri dev), `db:push` (Drizzle migration), `build` (production build).
+
+```typescript
+// next.config.ts
+export default { /* Turbopack, output config */ }
+
+// tailwind.config.ts
+export default { theme: { extend: { colors: {...} } } }
+
+// drizzle.config.ts
+export default { schema: './src/lib/db/schema.ts', dialect: 'postgresql' }
+```
+
+**Summary:** Configuration files for Next.js, Tailwind, TypeScript, Drizzle, and PostCSS with build scripts in package.json.
+
+## Build Artifacts and Ignored Files
+
+**Build artifacts** generate during development and production builds. The `.next/` directory contains Next.js build output (cache, server chunks, static files). The `src-tauri/target/` directory holds Rust compiled binaries (debug and release). The `node_modules/` directory stores pnpm dependencies. The `drizzle/` directory contains generated migration SQL files. The `.gitignore` file excludes: `node_modules/`, `.next/`, `src-tauri/target/`, `.env.local`, `.DS_Store`, `*.log`. The `.vercel/` directory stores Vercel deployment metadata (project.json, deployment URLs).
+
+```
+.next/                      # Next.js build output
+src-tauri/target/           # Rust binaries
+node_modules/               # pnpm dependencies
+drizzle/                    # SQL migrations
+.vercel/                    # Vercel metadata
+*.log                       # Log files (excluded)
+.env.local                  # Credentials (excluded)
+```
+
+**Summary:** Build artifacts in .next/ and target/ with git-ignored node_modules, env files, and logs.
+
+## FAQ
+
+**Q: Why monorepo instead of separate repos?**  
+A: Shared TypeScript types, single deploy pipeline, easier local development with single `pnpm dev`.
+
+**Q: Can Tauri app run standalone?**  
+A: Yes. `pnpm tauri build` creates platform-specific installers (DMG, MSI, AppImage) with bundled Next.js frontend.
+
+**Q: Where do migration files come from?**  
+A: `pnpm db:generate` reads `src/lib/db/schema.ts` and generates SQL files in `drizzle/` directory.
+
+**Q: Why src/app/api/ AND supabase/functions/?**  
+A: API routes handle browser-to-server calls (auth required). Edge Functions handle internal operations (service role, bypasses RLS).
+
+**Q: Can I run Next.js without Tauri?**  
+A: Yes. `pnpm dev` runs Next.js standalone. Tauri commands fail gracefully when not in desktop app.
+
+**Q: How to add a new Edge Function?**  
+A: Create `supabase/functions/my-function/index.ts`, deploy with `supabase functions deploy my-function`.

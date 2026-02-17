@@ -1,9 +1,9 @@
 /**
  * Tauri Audio Bridge — calls Rust backend for native audio capture
+ * Audio → CF Worker (STT Proxy) → STT Provider → Transcripts → analyze-chunk
  * Falls back gracefully when not running in Tauri (e.g., web browser)
  */
 
-// Check if we're running inside Tauri
 export function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI__' in window;
 }
@@ -15,15 +15,40 @@ interface AudioDevice {
 }
 
 interface CaptureConfig {
-  deepgramApiKey: string;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  internalApiKey: string;
+  /** Clerk JWT for authenticating with the STT proxy */
+  authToken: string;
+  /** STT proxy URL (Cloudflare Worker) */
+  sttProxyUrl?: string;
+  /** STT provider: deepgram | assemblyai | revai */
+  provider?: string;
+  /** STT model (e.g., nova-3 for Deepgram) */
+  model?: string;
+  /** Transcription language */
   language: string;
+  /** Supabase project URL */
+  supabaseUrl: string;
+  /** Supabase publishable key */
+  supabaseAnonKey: string;
+  /** Internal API key for Edge Functions */
+  internalApiKey: string;
 }
 
 interface CaptureStatus {
   isRecording: boolean;
+}
+
+interface TranscriptChunk {
+  speaker: string;
+  text: string;
+  timestamp: string;
+  confidence: number;
+  provider?: string;
+}
+
+interface ProviderSwitch {
+  from: string;
+  to: string;
+  reason: string;
 }
 
 /**
@@ -36,7 +61,7 @@ export async function listAudioDevices(): Promise<AudioDevice[]> {
 }
 
 /**
- * Start audio capture → Deepgram → analyze-chunk
+ * Start audio capture → STT Proxy → Provider → analyze-chunk
  */
 export async function startCapture(
   interviewId: number,
@@ -46,7 +71,16 @@ export async function startCapture(
   const { invoke } = await import('@tauri-apps/api/core');
   return invoke<string>('start_capture', {
     interviewId,
-    config,
+    config: {
+      authToken: config.authToken,
+      sttProxyUrl: config.sttProxyUrl || 'https://interview-stt-proxy.agusmontoya.workers.dev',
+      provider: config.provider || 'deepgram',
+      model: config.model || 'nova-3',
+      language: config.language,
+      supabaseUrl: config.supabaseUrl,
+      supabaseAnonKey: config.supabaseAnonKey,
+      internalApiKey: config.internalApiKey,
+    },
   });
 }
 
@@ -72,12 +106,26 @@ export async function getCaptureStatus(): Promise<CaptureStatus> {
  * Listen for transcript events from Rust
  */
 export async function onTranscript(
-  callback: (chunk: { speaker: string; text: string; timestamp: string; confidence: number }) => void
+  callback: (chunk: TranscriptChunk) => void
 ): Promise<() => void> {
   if (!isTauri()) return () => {};
   const { listen } = await import('@tauri-apps/api/event');
   const unlisten = await listen('transcript', (event) => {
-    callback(event.payload as any);
+    callback(event.payload as TranscriptChunk);
+  });
+  return unlisten;
+}
+
+/**
+ * Listen for provider failover events
+ */
+export async function onProviderSwitch(
+  callback: (data: ProviderSwitch) => void
+): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import('@tauri-apps/api/event');
+  const unlisten = await listen('provider-switch', (event) => {
+    callback(event.payload as ProviderSwitch);
   });
   return unlisten;
 }
@@ -86,7 +134,7 @@ export async function onTranscript(
  * Listen for capture error events
  */
 export async function onCaptureError(
-  callback: (error: { error: string }) => void
+  callback: (error: { error?: string; message?: string; code?: string }) => void
 ): Promise<() => void> {
   if (!isTauri()) return () => {};
   const { listen } = await import('@tauri-apps/api/event');

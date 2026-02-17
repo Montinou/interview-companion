@@ -44,8 +44,15 @@ pub async fn start_capture(
         return Err(anyhow::anyhow!("Already recording"));
     }
 
-    let deepgram_key = config["deepgramApiKey"].as_str().unwrap_or("").to_string();
+    // Auth token (Clerk JWT) for the STT proxy
+    let auth_token = config["authToken"].as_str().unwrap_or("").to_string();
+    // STT proxy URL (Cloudflare Worker)
+    let proxy_url = config["sttProxyUrl"].as_str()
+        .unwrap_or("https://interview-stt-proxy.agusmontoya.workers.dev")
+        .to_string();
     let language = config["language"].as_str().unwrap_or("en").to_string();
+    let provider = config["provider"].as_str().unwrap_or("deepgram").to_string();
+    let model = config["model"].as_str().unwrap_or("nova-3").to_string();
     let supabase_url = config["supabaseUrl"].as_str().unwrap_or("").to_string();
     let supabase_anon = config["supabaseAnonKey"].as_str().unwrap_or("").to_string();
     let internal_key = config["internalApiKey"].as_str().unwrap_or("").to_string();
@@ -72,7 +79,8 @@ pub async fn start_capture(
     let app_clone2 = app.clone();
     tokio::spawn(async move {
         if let Err(e) = run_websocket(
-            audio_rx, stop_rx, &deepgram_key, &language,
+            audio_rx, stop_rx, &auth_token, &proxy_url,
+            &language, &provider, &model,
             &supabase_url, &supabase_anon, &internal_key,
             interview_id, &app_clone2,
         ).await {
@@ -157,28 +165,32 @@ fn run_audio_thread(
     Ok(())
 }
 
-/// Runs on tokio — connects to Deepgram, forwards audio, dispatches transcripts
+/// Runs on tokio — connects to STT proxy (Cloudflare Worker), forwards audio, dispatches transcripts
 async fn run_websocket(
     mut audio_rx: mpsc::Receiver<Vec<u8>>,
     mut stop_rx: mpsc::Receiver<()>,
-    deepgram_key: &str,
+    auth_token: &str,
+    proxy_url: &str,
     language: &str,
+    provider: &str,
+    model: &str,
     supabase_url: &str,
     supabase_anon: &str,
     internal_key: &str,
     interview_id: i64,
     app: &tauri::AppHandle,
 ) -> Result<(), anyhow::Error> {
-    // Connect to Deepgram
-    let url = format!(
-        "wss://api.deepgram.com/v1/listen?model=nova-3&language={}&smart_format=true&diarize=true&interim_results=false&utterance_end_ms=1500&encoding=linear16&sample_rate=48000&channels=1",
-        language
+    // Build proxy WebSocket URL
+    let ws_url = format!(
+        "{}/ws?provider={}&language={}&model={}&channels=1",
+        proxy_url.replace("https://", "wss://").replace("http://", "ws://"),
+        provider, language, model
     );
 
     let request = tokio_tungstenite::tungstenite::http::Request::builder()
-        .uri(&url)
-        .header("Authorization", format!("Token {}", deepgram_key))
-        .header("Host", "api.deepgram.com")
+        .uri(&ws_url)
+        .header("Authorization", format!("Bearer {}", auth_token))
+        .header("Host", proxy_url.replace("https://", "").replace("http://", ""))
         .header("Connection", "Upgrade")
         .header("Upgrade", "websocket")
         .header("Sec-WebSocket-Version", "13")
@@ -188,9 +200,9 @@ async fn run_websocket(
     let (ws_stream, _) = connect_async(request).await?;
     let (mut ws_tx, mut ws_rx) = ws_stream.split();
 
-    log::info!("Deepgram connected");
+    log::info!("STT proxy connected (provider: {}, language: {})", provider, language);
 
-    // Spawn transcript reader
+    // Spawn transcript reader — proxy normalizes all providers to same format
     let supabase_url = supabase_url.to_string();
     let supabase_anon = supabase_anon.to_string();
     let internal_key = internal_key.to_string();
@@ -201,41 +213,58 @@ async fn run_websocket(
         while let Some(Ok(msg)) = ws_rx.next().await {
             if let Message::Text(text) = msg {
                 if let Ok(data) = serde_json::from_str::<serde_json::Value>(&text) {
-                    if data["type"] == "Results" && data["is_final"] == true {
-                        let transcript = data["channel"]["alternatives"][0]["transcript"]
-                            .as_str().unwrap_or("");
-                        if transcript.is_empty() { continue; }
+                    match data["type"].as_str() {
+                        Some("transcript") if data["is_final"] == true => {
+                            let transcript = data["text"].as_str().unwrap_or("");
+                            if transcript.is_empty() { continue; }
 
-                        let speaker = data["channel"]["alternatives"][0]["words"]
-                            .as_array()
-                            .and_then(|w| w.first())
-                            .and_then(|w| w["speaker"].as_i64())
-                            .unwrap_or(0);
+                            // Extract speaker from words array (Deepgram diarization)
+                            let speaker = data["words"]
+                                .as_array()
+                                .and_then(|w| w.first())
+                                .and_then(|w| w["speaker"].as_i64())
+                                .unwrap_or(0);
 
-                        let chunk = json!({
-                            "speaker": format!("speaker_{}", speaker),
-                            "text": transcript,
-                            "timestamp": chrono::Utc::now().to_rfc3339(),
-                            "confidence": data["channel"]["alternatives"][0]["confidence"]
-                                .as_f64().unwrap_or(0.9),
-                        });
+                            let chunk = json!({
+                                "speaker": format!("speaker_{}", speaker),
+                                "text": transcript,
+                                "timestamp": chrono::Utc::now().to_rfc3339(),
+                                "confidence": data["confidence"].as_f64().unwrap_or(0.9),
+                                "provider": data["provider"],
+                            });
 
-                        let _ = app_clone.emit("transcript", &chunk);
+                            let _ = app_clone.emit("transcript", &chunk);
 
-                        // Send to analyze-chunk
-                        let _ = client.post(format!("{}/functions/v1/analyze-chunk", supabase_url))
-                            .header("Authorization", format!("Bearer {}", supabase_anon))
-                            .header("x-internal-key", &internal_key)
-                            .json(&json!({ "interviewId": interview_id, "chunk": chunk }))
-                            .send()
-                            .await;
+                            // Send to analyze-chunk Edge Function
+                            let _ = client.post(format!("{}/functions/v1/analyze-chunk", supabase_url))
+                                .header("Authorization", format!("Bearer {}", supabase_anon))
+                                .header("x-internal-key", &internal_key)
+                                .json(&json!({ "interviewId": interview_id, "chunk": chunk }))
+                                .send()
+                                .await;
+                        }
+                        Some("provider_switch") => {
+                            log::warn!("STT provider failover: {} → {}",
+                                data["from"].as_str().unwrap_or("?"),
+                                data["to"].as_str().unwrap_or("?"));
+                            let _ = app_clone.emit("provider-switch", &data);
+                        }
+                        Some("error") => {
+                            log::error!("STT proxy error: {}", data["message"].as_str().unwrap_or("unknown"));
+                            let _ = app_clone.emit("capture-error", &data);
+                        }
+                        Some("connected") => {
+                            log::info!("STT proxy confirmed connection: provider={}", 
+                                data["provider"].as_str().unwrap_or("?"));
+                        }
+                        _ => {} // ignore interim results, metadata, etc.
                     }
                 }
             }
         }
     });
 
-    // Main loop: forward audio to Deepgram
+    // Main loop: forward audio to proxy → provider
     loop {
         tokio::select! {
             Some(audio) = audio_rx.recv() => {
