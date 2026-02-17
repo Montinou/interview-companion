@@ -1,0 +1,9 @@
+# Interview Companion — robots.txt
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+Disallow: /sign-in
+Disallow: /sign-up
+
+Sitemap: https://interview-companion.triqual.dev/sitemap.xml
