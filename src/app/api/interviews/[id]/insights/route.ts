@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { aiInsights, interviews } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { validateApiKey, validateDualAuth, unauthorizedResponse } from '@/lib/api-auth';
+import { getOrgContext } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
@@ -72,27 +73,32 @@ export async function GET(
   try {
     const { id } = await params;
     const interviewId = parseInt(id);
+
+    // Verify org ownership for Clerk sessions
+    if (!validateApiKey(request)) {
+      try {
+        const { orgId } = await getOrgContext();
+        const interview = await db.query.interviews.findFirst({
+          where: and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)),
+        });
+        if (!interview) {
+          return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+        }
+      } catch {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
     
     // Get type filter from query params
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get('type');
 
-    let insights;
-    
-    if (typeFilter) {
-      insights = await db.query.aiInsights.findMany({
-        where: and(
-          eq(aiInsights.interviewId, interviewId),
-          eq(aiInsights.type, typeFilter)
-        ),
-        orderBy: [desc(aiInsights.timestamp)],
-      });
-    } else {
-      insights = await db.query.aiInsights.findMany({
-        where: eq(aiInsights.interviewId, interviewId),
-        orderBy: [desc(aiInsights.timestamp)],
-      });
-    }
+    const insights = await db.query.aiInsights.findMany({
+      where: typeFilter
+        ? and(eq(aiInsights.interviewId, interviewId), eq(aiInsights.type, typeFilter))
+        : eq(aiInsights.interviewId, interviewId),
+      orderBy: [desc(aiInsights.timestamp)],
+    });
 
     return NextResponse.json(insights);
   } catch (error) {

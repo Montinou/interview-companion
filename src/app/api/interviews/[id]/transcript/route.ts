@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { transcripts, interviews } from '@/lib/db/schema';
 import { eq, gt, and, asc, sql } from 'drizzle-orm';
-import { validateDualAuth, unauthorizedResponse } from '@/lib/api-auth';
+import { validateDualAuth, validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
+import { getOrgContext } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
@@ -16,14 +17,26 @@ export async function GET(
     const { id } = await params;
     const interviewId = parseInt(id);
 
-    // For Clerk auth, verify org ownership
-    // For API key auth (M2M), we trust the caller
-    // validateDualAuth already confirmed one of these
-    const interview = await db.query.interviews.findFirst({
-      where: eq(interviews.id, interviewId),
-    });
-    if (!interview) {
-      return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+    // Verify org ownership for Clerk sessions; M2M API key is trusted
+    if (!validateApiKey(request)) {
+      try {
+        const { orgId } = await getOrgContext();
+        const interview = await db.query.interviews.findFirst({
+          where: and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)),
+        });
+        if (!interview) {
+          return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+        }
+      } catch {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      const interview = await db.query.interviews.findFirst({
+        where: eq(interviews.id, interviewId),
+      });
+      if (!interview) {
+        return NextResponse.json({ error: 'Interview not found' }, { status: 404 });
+      }
     }
 
     const { searchParams } = new URL(request.url);

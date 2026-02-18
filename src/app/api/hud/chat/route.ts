@@ -32,9 +32,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 403 });
     }
 
+    const { orgId } = await auth();
+    const effectiveOrgId = orgId || `personal_${clerkId}`;
+
     const interview = await db.query.interviews.findFirst({
       where: and(
         eq(interviews.id, interviewId),
+        eq(interviews.orgId, effectiveOrgId),
         eq(interviews.interviewerId, dbUser.id),
       ),
     });
