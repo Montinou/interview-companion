@@ -15,7 +15,7 @@ jobs:
       matrix:
         include:
           - platform: macos-latest
-            args: '--target universal-apple-darwin'
+            args: '--target aarch64-apple-darwin'
             artifact-name: macos
           - platform: windows-latest
             args: ''

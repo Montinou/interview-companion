@@ -22,11 +22,8 @@ tauri = { version = "2.10.0", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
 
-# Audio capture — mic via cpal, system audio via ScreenCaptureKit (macOS only)
+# Audio capture
 cpal = "0.15"
-
-[target.'cfg(target_os = "macos")'.dependencies]
-screencapturekit = { version = "1", features = ["async"] }
 
 # Async runtime for WebSocket
 tokio = { version = "1", features = ["full"] }
@@ -44,3 +41,7 @@ lazy_static = "1.5"
 
 # Error handling
 anyhow = "1.0"
+
+# macOS only: ScreenCaptureKit for system audio capture
+[target.'cfg(target_os = "macos")'.dependencies]
+screencapturekit = { version = "1", features = ["async"] }
