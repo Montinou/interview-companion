@@ -14,6 +14,7 @@ import { InterviewGuide } from '@/components/interview/InterviewGuide';
 import { LiveTimer } from '@/components/interview/LiveTimer';
 import { Button } from '@/components/ui-button';
 import { TranscriptModalWrapper } from '@/components/interview/TranscriptModalWrapper';
+import { LiveCaptureWrapper } from '@/components/interview/LiveCaptureWrapper';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,14 @@ export default async function InterviewDetailPage({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Audio Capture (Tauri only) */}
+          {isLive && (
+            <LiveCaptureWrapper
+              interviewId={interview.id}
+              language={interview.language || 'en'}
+            />
+          )}
+
           {/* Timer */}
           {interview.status !== 'scheduled' && (
             <LiveTimer
