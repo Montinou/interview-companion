@@ -1,6 +1,8 @@
 'use client';
 
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -47,20 +49,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="flex flex-col items-center justify-center p-6 rounded-lg bg-red-500/10 border border-red-500/20 text-center gap-3">
-          <div className="text-red-400 text-sm font-medium">
-            {this.props.name ? `${this.props.name} encountered an error` : 'Something went wrong'}
+        <Alert variant="destructive" className="flex flex-col items-center text-center gap-3">
+          <div>
+            <AlertTitle className="text-sm font-medium">
+              {this.props.name ? `${this.props.name} encountered an error` : 'Something went wrong'}
+            </AlertTitle>
+            <AlertDescription className="text-xs max-w-sm mt-2">
+              {this.state.error?.message || 'An unexpected error occurred'}
+            </AlertDescription>
           </div>
-          <div className="text-zinc-500 text-xs max-w-sm">
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </div>
-          <button
+          <Button
             onClick={this.handleRetry}
-            className="px-3 py-1.5 text-xs rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
+            variant="outline"
+            size="sm"
+            className="mt-2"
           >
             Try again
-          </button>
-        </div>
+          </Button>
+        </Alert>
       );
     }
 

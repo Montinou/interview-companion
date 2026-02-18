@@ -1,5 +1,8 @@
 'use client';
 
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 import { InsightEntry } from '../page';
 
 interface UnifiedInsightsPanelProps {
@@ -11,26 +14,30 @@ export default function UnifiedInsightsPanel({ insights }: UnifiedInsightsPanelP
   const sorted = [...insights].sort((a, b) => b.timestamp - a.timestamp);
 
   return (
-    <div className="bg-[#111118] rounded-lg border border-gray-800 flex flex-col h-full">
+    <Card className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-gray-800 shrink-0">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+      <CardHeader className="px-3 py-2 shrink-0">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           💡 Insights & Suggestions
         </h3>
-      </div>
+      </CardHeader>
 
       {/* Scrollable feed */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
-        {sorted.length === 0 && (
-          <div className="text-center text-gray-500 text-sm mt-8">
-            No insights yet...
+      <CardContent className="flex-1 min-h-0 p-0">
+        <ScrollArea className="h-full">
+          <div className="p-2 space-y-2">
+            {sorted.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm mt-8">
+                No insights yet...
+              </div>
+            )}
+            {sorted.map((insight, idx) => (
+              <InsightCard key={idx} insight={insight} />
+            ))}
           </div>
-        )}
-        {sorted.map((insight, idx) => (
-          <InsightCard key={idx} insight={insight} />
-        ))}
-      </div>
-    </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -75,10 +82,10 @@ function InsightCard({ insight }: { insight: InsightEntry }) {
       {/* Header row: time, tier, type */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-gray-500 text-xs font-mono">{insight.time}</span>
-          <span className={`text-xs px-1.5 py-0.5 rounded ${insight.tier === 2 ? 'bg-orange-500/20 text-orange-300' : 'bg-blue-500/20 text-blue-300'}`}>
+          <span className="text-muted-foreground text-xs font-mono">{insight.time}</span>
+          <Badge variant={insight.tier === 2 ? "default" : "secondary"} className="text-xs">
             T{insight.tier}
-          </span>
+          </Badge>
         </div>
         <span className={`text-xs ${typeText} flex items-center gap-1`}>
           <span>{icon}</span>
@@ -90,10 +97,10 @@ function InsightCard({ insight }: { insight: InsightEntry }) {
       <div className="space-y-2">
         {/* Main insight/flag text */}
         {parsed.insight && (
-          <div className="text-gray-200">{parsed.insight}</div>
+          <div className="text-foreground">{parsed.insight}</div>
         )}
         {parsed.flag && (
-          <div className="text-gray-200 font-medium">{parsed.flag}</div>
+          <div className="text-foreground font-medium">{parsed.flag}</div>
         )}
         {parsed.red_flags && parsed.red_flags.map((flag: string, i: number) => (
           <div key={i} className="text-red-300">{flag}</div>
@@ -112,35 +119,35 @@ function InsightCard({ insight }: { insight: InsightEntry }) {
         {/* Tags row */}
         <div className="flex flex-wrap gap-1 mt-2">
           {parsed.topic && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300">
+            <Badge variant="secondary" className="text-xs">
               {parsed.topic}
-            </span>
+            </Badge>
           )}
           {parsed.sentiment && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300">
+            <Badge variant="secondary" className="text-xs">
               {parsed.sentiment}
-            </span>
+            </Badge>
           )}
           {parsed.evidence && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300">
+            <Badge variant="secondary" className="text-xs">
               📎 evidence
-            </span>
+            </Badge>
           )}
           {parsed.score !== undefined && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300">
+            <Badge variant="secondary" className="text-xs">
               ⭐ {parsed.score}/10
-            </span>
+            </Badge>
           )}
           {parsed.response_quality && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700/50 text-gray-300">
+            <Badge variant="secondary" className="text-xs">
               {parsed.response_quality}
-            </span>
+            </Badge>
           )}
         </div>
 
         {/* Evidence detail */}
         {parsed.evidence && typeof parsed.evidence === 'string' && (
-          <div className="text-xs text-gray-400 italic mt-1 pl-2 border-l-2 border-gray-700">
+          <div className="text-xs text-muted-foreground italic mt-1 pl-2 border-l-2 border-border">
             {parsed.evidence}
           </div>
         )}

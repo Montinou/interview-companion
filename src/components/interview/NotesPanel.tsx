@@ -3,6 +3,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, Loader2, MessageSquare } from 'lucide-react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 interface NotesPanelProps {
   interviewId: number;
@@ -94,70 +98,77 @@ export function NotesPanel({ interviewId }: NotesPanelProps) {
   }, [input, interviewId, sending]);
 
   return (
-    <div className="rounded-lg border border-gray-800 bg-[#111118] flex flex-col h-full">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-800">
-        <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          Notas & AI Chat
-        </h3>
-        <span className="text-[10px] text-gray-600 ml-auto">{notes.length}</span>
-      </div>
-
-      {/* Notes list */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-2 space-y-2 min-h-0">
-        {notes.length === 0 && (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs">
-            Escribí notas o preguntas para la IA...
-          </div>
-        )}
-        {notes.map(note => (
-          <div key={note.id} className="space-y-1">
-            {/* User note */}
-            <div className="flex gap-2">
-              <span className="text-[10px] text-gray-600 shrink-0 pt-0.5">{note.timestamp}</span>
-              <p className="text-xs text-gray-200 bg-gray-800/50 rounded px-2 py-1 flex-1">
-                {note.text}
-              </p>
-            </div>
-            {/* AI response */}
-            {note.loading && (
-              <div className="flex gap-2 pl-12">
-                <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
-                <span className="text-[10px] text-gray-500">Pensando...</span>
-              </div>
-            )}
-            {note.aiResponse && (
-              <div className="flex gap-2 pl-4">
-                <span className="text-[10px] text-indigo-400 shrink-0 pt-0.5">🤖</span>
-                <p className="text-xs text-indigo-100 bg-indigo-500/15 rounded px-2 py-1 flex-1 border border-indigo-500/20 whitespace-pre-line">
-                  {note.aiResponse}
-                </p>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Input */}
-      <div className="border-t border-gray-800 p-2">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendNote()}
-            placeholder="Nota o pregunta para la IA..."
-            className="flex-1 bg-gray-900 border border-gray-700 rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500/50"
-          />
-          <button
-            onClick={sendNote}
-            disabled={!input.trim() || sending}
-            className="px-3 py-1.5 rounded bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-          >
-            <Send className="h-3 w-3" />
-          </button>
+    <Card className="border-border bg-card flex flex-col h-full">
+      <CardHeader className="py-3">
+        <div className="flex items-center gap-2">
+          <MessageSquare className="h-3.5 w-3.5 text-indigo-400" />
+          <CardTitle className="text-xs font-semibold uppercase tracking-wider">
+            Notas & AI Chat
+          </CardTitle>
+          <span className="text-[10px] text-muted-foreground ml-auto">{notes.length}</span>
         </div>
-      </div>
-    </div>
+      </CardHeader>
+
+      <CardContent className="flex-1 min-h-0 flex flex-col p-0">
+        {/* Notes list */}
+        <ScrollArea className="flex-1 px-4">
+          <div className="space-y-2 py-2">
+            {notes.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-muted-foreground text-xs">
+                Escribí notas o preguntas para la IA...
+              </div>
+            )}
+            {notes.map(note => (
+              <div key={note.id} className="space-y-1">
+                {/* User note */}
+                <div className="flex gap-2">
+                  <span className="text-[10px] text-muted-foreground shrink-0 pt-0.5">{note.timestamp}</span>
+                  <p className="text-xs bg-muted/50 rounded px-2 py-1 flex-1">
+                    {note.text}
+                  </p>
+                </div>
+                {/* AI response */}
+                {note.loading && (
+                  <div className="flex gap-2 pl-12">
+                    <Loader2 className="h-3 w-3 animate-spin text-indigo-400" />
+                    <span className="text-[10px] text-muted-foreground">Pensando...</span>
+                  </div>
+                )}
+                {note.aiResponse && (
+                  <div className="flex gap-2 pl-4">
+                    <span className="text-[10px] text-indigo-400 shrink-0 pt-0.5">🤖</span>
+                    <p className="text-xs text-indigo-100 bg-indigo-500/15 rounded px-2 py-1 flex-1 border border-indigo-500/20 whitespace-pre-line">
+                      {note.aiResponse}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="border-t border-border p-2">
+          <div className="flex gap-2">
+            <Input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendNote()}
+              placeholder="Nota o pregunta para la IA..."
+              className="flex-1 text-xs"
+            />
+            <Button
+              onClick={sendNote}
+              disabled={!input.trim() || sending}
+              size="sm"
+              className="px-3 bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Send className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

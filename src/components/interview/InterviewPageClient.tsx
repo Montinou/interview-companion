@@ -10,7 +10,10 @@ import { ScorecardPanel } from './ScorecardPanel';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Link from 'next/link';
 import { ArrowLeft, Play, CheckCircle, User, Mail, Phone, FileText, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui-button';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 
 type LanguageCode = 'es' | 'en' | 'multi';
 
@@ -90,20 +93,29 @@ export function InterviewPageClient({
           {/* Left Column - Candidate Info & Actions */}
           <div className="xl:col-span-3 space-y-6">
             {/* Candidate Card */}
-            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
-              <div className="flex items-center gap-3 pb-4 border-b">
-                <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
-                  <User className="h-5 w-5 text-blue-600" />
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
+                    <User className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <CardTitle className="text-base">Candidato</CardTitle>
+                    <p className="text-xs text-muted-foreground">
+                      Entrevista #{interview.id}
+                    </p>
+                  </div>
+                  <Badge variant={
+                    interview.status === 'live' ? 'default' :
+                    interview.status === 'completed' ? 'secondary' :
+                    'outline'
+                  }>
+                    {interview.status}
+                  </Badge>
                 </div>
-                <div>
-                  <h3 className="font-semibold">Candidato</h3>
-                  <p className="text-xs text-muted-foreground">
-                    Entrevista #{interview.id}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3">
+              </CardHeader>
+              <Separator />
+              <CardContent className="pt-6 space-y-3">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Nombre</p>
                   <p className="font-medium">{interview.candidate.name}</p>
@@ -164,56 +176,59 @@ export function InterviewPageClient({
                     </p>
                   </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Actions */}
-            <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4">
-              <h3 className="font-semibold">Acciones</h3>
-
-              {interview.status === 'scheduled' && (
-                <form
-                  action={() => updateStatusAction(interview.id, 'live')}
-                  className="w-full"
-                >
-                  <Button type="submit" className="w-full" size="lg">
-                    <Play className="h-4 w-4" />
-                    Iniciar Entrevista
-                  </Button>
-                </form>
-              )}
-
-              {interview.status === 'live' && (
-                <form
-                  action={() => updateStatusAction(interview.id, 'completed')}
-                  className="w-full"
-                >
-                  <Button
-                    type="submit"
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Acciones</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {interview.status === 'scheduled' && (
+                  <form
+                    action={() => updateStatusAction(interview.id, 'live')}
                     className="w-full"
-                    size="lg"
-                    variant="default"
                   >
-                    <CheckCircle className="h-4 w-4" />
-                    Finalizar Entrevista
-                  </Button>
-                </form>
-              )}
+                    <Button type="submit" className="w-full" size="lg">
+                      <Play className="h-4 w-4" />
+                      Iniciar Entrevista
+                    </Button>
+                  </form>
+                )}
 
-              {interview.status === 'completed' && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                  <p className="font-medium text-green-600">
-                    Entrevista completada
-                  </p>
-                  {interview.completedAt && (
-                    <p className="text-sm">
-                      {new Date(interview.completedAt).toLocaleString('es-AR')}
+                {interview.status === 'live' && (
+                  <form
+                    action={() => updateStatusAction(interview.id, 'completed')}
+                    className="w-full"
+                  >
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="lg"
+                      variant="default"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Finalizar Entrevista
+                    </Button>
+                  </form>
+                )}
+
+                {interview.status === 'completed' && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                    <p className="font-medium text-green-600">
+                      Entrevista completada
                     </p>
-                  )}
-                </div>
-              )}
-            </div>
+                    {interview.completedAt && (
+                      <p className="text-sm">
+                        {new Date(interview.completedAt).toLocaleString('es-AR')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Center Column - Main Content */}

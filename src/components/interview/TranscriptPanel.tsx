@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, User, Mic, X } from 'lucide-react';
+import { FileText, User, Mic } from 'lucide-react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
-import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
 
 interface TranscriptEntry {
   id: number;
@@ -26,7 +27,6 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastIdRef = useRef<number | null>(null);
   const initialLoadDone = useRef(false);
-  const panelRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   const fetchTranscript = useCallback(async () => {
     try {
@@ -106,98 +106,64 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 z-40"
-            aria-hidden="true"
-          />
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="w-[600px] sm:w-[600px] flex flex-col">
+        <SheetHeader>
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-muted/50 p-2">
+              <FileText className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <SheetTitle>Transcript</SheetTitle>
+              <SheetDescription>
+                {transcript.length} entradas
+              </SheetDescription>
+            </div>
+          </div>
+        </SheetHeader>
 
-          {/* Slide-over Panel */}
-          <motion.div
-            ref={panelRef}
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-[600px] bg-[#111118] border-l border-gray-800 z-50 flex flex-col"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Transcript panel"
-          >
-            {/* Header */}
-            <div className="p-4 border-b border-gray-800/50 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-gray-500/10 p-2">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Transcript</h3>
-                  <p className="text-sm text-gray-500">
-                    {transcript.length} entradas
-                  </p>
-                </div>
+        <ScrollArea className="flex-1 mt-6" ref={scrollRef}>
+          <div className="space-y-3 pr-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-muted border-t-transparent rounded-full" />
               </div>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
+            ) : transcript.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                <p>No hay transcript todavía</p>
+              </div>
+            ) : (
+              transcript.map((entry) => {
+                const config = getSpeakerConfig(entry.speaker);
+                const Icon = config.icon;
 
-            {/* Content */}
-            <div
-              ref={scrollRef}
-              className="flex-1 overflow-y-auto p-4 space-y-3"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin h-6 w-6 border-2 border-gray-500 border-t-transparent rounded-full" />
-                </div>
-              ) : transcript.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-                  <p>No hay transcript todavía</p>
-                </div>
-              ) : (
-                transcript.map((entry) => {
-                  const config = getSpeakerConfig(entry.speaker);
-                  const Icon = config.icon;
-
-                  return (
-                    <div
-                      key={entry.id}
-                      className="flex gap-3 p-3 rounded-lg bg-gray-800/30"
-                    >
-                      <div className={`shrink-0 p-1.5 rounded-full ${config.bgColor}`}>
-                        <Icon className={`h-3 w-3 ${config.textColor}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-xs font-medium ${config.textColor}`}>
-                            {config.label}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatTime(entry.timestamp)}
-                          </span>
-                        </div>
-                        <p className="text-sm leading-relaxed text-gray-100">{entry.text}</p>
-                      </div>
+                return (
+                  <div
+                    key={entry.id}
+                    className="flex gap-3 p-3 rounded-lg bg-muted/30"
+                  >
+                    <div className={`shrink-0 p-1.5 rounded-full ${config.bgColor}`}>
+                      <Icon className={`h-3 w-3 ${config.textColor}`} />
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className={`text-xs ${config.textColor}`}>
+                          {config.label}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatTime(entry.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-sm leading-relaxed">{entry.text}</p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
   );
 }

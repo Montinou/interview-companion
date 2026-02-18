@@ -1,5 +1,7 @@
 'use client';
 import { useState, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function NotesPanel() {
   const [notes, setNotes] = useState('');
@@ -19,17 +21,25 @@ export default function NotesPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-gray-800 shrink-0 flex items-center justify-between">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">📝 Notas</h3>
-        <button onClick={save} disabled={saving}
-          className="text-[10px] px-2 py-0.5 rounded bg-purple-600/50 text-purple-200 hover:bg-purple-600/70 disabled:opacity-50">
+      <div className="px-3 py-2 border-b border-border shrink-0 flex items-center justify-between">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">📝 Notas</h3>
+        <Button 
+          onClick={save} 
+          disabled={saving}
+          size="sm"
+          variant="secondary"
+          className="text-[10px] h-6"
+        >
           {saving ? '...' : 'Guardar'}
-        </button>
+        </Button>
       </div>
-      <textarea value={notes} onChange={e => setNotes(e.target.value)}
+      <Textarea 
+        value={notes} 
+        onChange={e => setNotes(e.target.value)}
         placeholder="Notas durante la entrevista..."
-        className="flex-1 bg-transparent text-gray-100 text-sm p-2 resize-none focus:outline-none placeholder:text-gray-500 min-h-0"
-        onBlur={save} />
+        className="flex-1 resize-none rounded-none border-0 focus-visible:ring-0 min-h-0"
+        onBlur={save} 
+      />
     </div>
   );
 }

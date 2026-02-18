@@ -5,6 +5,9 @@ import { db } from '@/lib/db';
 import { interviews } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { getOrgContext, AuthError } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default async function InterviewsPage() {
   try {
@@ -34,64 +37,74 @@ export default async function InterviewsPage() {
               Manage your candidate interviews
             </p>
           </div>
-          <Link
-            href="/dashboard/interviews/new"
-            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
-          >
-            + New Interview
-          </Link>
+          <Button asChild>
+            <Link href="/dashboard/interviews/new">
+              + New Interview
+            </Link>
+          </Button>
         </div>
 
         {userInterviews.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed rounded-xl">
-            <div className="text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-semibold mb-2">No interviews yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Create your first interview to get started
-            </p>
-            <Link
-              href="/dashboard/interviews/new"
-              className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
-            >
-              Create Interview
-            </Link>
-          </div>
+          <Card className="border-2 border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-20">
+              <div className="text-6xl mb-4">📋</div>
+              <h3 className="text-xl font-semibold mb-2">No interviews yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Create your first interview to get started
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/interviews/new">
+                  Create Interview
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid gap-4">
             {userInterviews.map((interview) => (
               <Link
                 key={interview.id}
                 href={`/dashboard/live-interview?id=${interview.id}`}
-                className="p-6 rounded-xl border bg-card hover:bg-accent/50 transition-colors"
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-lg">
-                      {interview.candidate.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {interview.candidate.email}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                        interview.status === 'completed'
-                          ? 'bg-green-500/10 text-green-500'
-                          : interview.status === 'live'
-                          ? 'bg-blue-500/10 text-blue-500'
-                          : interview.status === 'scheduled'
-                          ? 'bg-yellow-500/10 text-yellow-500'
-                          : 'bg-gray-500/10 text-gray-500'
-                      }`}
-                    >
-                      {interview.status}
-                    </span>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(interview.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
+                <Card className="hover:bg-accent/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-lg">
+                          {interview.candidate.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {interview.candidate.email}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant={
+                            interview.status === 'completed'
+                              ? 'default'
+                              : interview.status === 'live'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className={
+                            interview.status === 'completed'
+                              ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                              : interview.status === 'live'
+                              ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                              : interview.status === 'scheduled'
+                              ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
+                              : 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
+                          }
+                        >
+                          {interview.status}
+                        </Badge>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {new Date(interview.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             ))}
           </div>

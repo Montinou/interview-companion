@@ -2,6 +2,10 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -85,62 +89,67 @@ export default function AIChatPanel({ interviewId }: AIChatPanelProps) {
   };
 
   return (
-    <div className="bg-[#111118] rounded-lg border border-gray-800 flex flex-col h-full">
+    <Card className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-3 py-2 border-b border-gray-800 shrink-0">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+      <CardHeader className="px-3 py-2 shrink-0">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
           🤖 AI Chat
         </h3>
-      </div>
+      </CardHeader>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 text-sm mt-8">
-            Ask anything about the candidate...
+      <CardContent className="flex-1 min-h-0 p-0">
+        <ScrollArea className="h-full">
+          <div className="p-3 space-y-3">
+            {messages.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm mt-8">
+                Ask anything about the candidate...
+              </div>
+            )}
+            {messages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
           </div>
-        )}
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
-                msg.role === 'user'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-700 text-gray-100'
-              }`}
-            >
-              {msg.content}
-            </div>
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
-      </div>
+        </ScrollArea>
+      </CardContent>
 
       {/* Input */}
-      <div className="border-t border-gray-800 p-2 shrink-0">
+      <div className="border-t border-border p-2 shrink-0">
         <div className="flex gap-2">
-          <textarea
+          <Textarea
             ref={inputRef}
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask about the candidate..."
             disabled={!interviewId || loading}
-            className="flex-1 bg-gray-900 text-gray-100 text-sm px-3 py-2 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder:text-gray-500 disabled:opacity-50"
+            className="flex-1 resize-none min-h-[60px]"
             rows={2}
           />
-          <button
+          <Button
             onClick={sendMessage}
             disabled={!input.trim() || !interviewId || loading}
-            className="self-end p-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            size="icon"
+            className="self-end"
           >
-            <Send className="h-5 w-5" />
-          </button>
+            <Send className="h-4 w-4" />
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

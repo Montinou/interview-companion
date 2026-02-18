@@ -1,8 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Globe } from 'lucide-react';
+import { Globe, Check } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 const LANGUAGES = [
   { code: 'es', label: 'ES', flag: '🇪🇸', name: 'Español' },
@@ -24,97 +30,60 @@ export function LanguageSwitcher({
   onChange,
   compact = false,
 }: LanguageSwitcherProps) {
-  const [isOpen, setIsOpen] = useState(false);
   const current = LANGUAGES.find((l) => l.code === value) || LANGUAGES[0];
 
-  const handleSelect = (code: LanguageCode) => {
-    onChange?.(code);
-    setIsOpen(false);
-  };
-
   if (compact) {
-    // Inline toggle buttons
+    // Inline toggle buttons using ToggleGroup
     return (
-      <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50 border">
+      <ToggleGroup
+        type="single"
+        value={value}
+        onValueChange={(v) => v && onChange?.(v as LanguageCode)}
+        className="gap-1 p-1 bg-muted/50 border rounded-lg"
+      >
         {LANGUAGES.map((lang) => (
-          <button
+          <ToggleGroupItem
             key={lang.code}
-            onClick={() => handleSelect(lang.code)}
-            className={`
-              px-2.5 py-1 rounded-md text-xs font-medium transition-all
-              ${value === lang.code
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-              }
-            `}
+            value={lang.code}
+            className="px-2.5 py-1 text-xs data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
             title={lang.name}
           >
             <span className="mr-1">{lang.flag}</span>
             {lang.label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
     );
   }
 
-  // Dropdown style
+  // Dropdown style using DropdownMenu
   return (
-    <div className="relative">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-card/50 hover:bg-card transition-colors text-sm font-medium"
-      >
-        <Globe className="h-4 w-4 text-muted-foreground" />
-        <span>{current.flag}</span>
-        <span>{current.label}</span>
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setIsOpen(false)}
-            />
-            
-            {/* Dropdown */}
-            <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.95 }}
-              transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 z-50 min-w-[160px] rounded-xl border bg-card shadow-lg p-1"
-            >
-              {LANGUAGES.map((lang) => (
-                <button
-                  key={lang.code}
-                  onClick={() => handleSelect(lang.code)}
-                  className={`
-                    w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors
-                    ${value === lang.code
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'hover:bg-muted text-foreground'
-                    }
-                  `}
-                >
-                  <span className="text-base">{lang.flag}</span>
-                  <div className="text-left">
-                    <p className="font-medium">{lang.label}</p>
-                    <p className="text-xs text-muted-foreground">{lang.name}</p>
-                  </div>
-                  {value === lang.code && (
-                    <motion.div
-                      layoutId="language-check"
-                      className="ml-auto h-2 w-2 rounded-full bg-primary"
-                    />
-                  )}
-                </button>
-              ))}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="sm" className="bg-card/50">
+          <Globe className="h-4 w-4 mr-2 text-muted-foreground" />
+          <span>{current.flag}</span>
+          <span className="ml-1">{current.label}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-[160px]">
+        {LANGUAGES.map((lang) => (
+          <DropdownMenuItem
+            key={lang.code}
+            onClick={() => onChange?.(lang.code)}
+            className={value === lang.code ? 'bg-primary/10 text-primary font-medium' : ''}
+          >
+            <span className="text-base mr-3">{lang.flag}</span>
+            <div className="flex-1">
+              <p className="font-medium">{lang.label}</p>
+              <p className="text-xs text-muted-foreground">{lang.name}</p>
+            </div>
+            {value === lang.code && (
+              <Check className="h-4 w-4 ml-auto" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

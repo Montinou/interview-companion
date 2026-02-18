@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { isTauri, startCapture, stopCapture, getCaptureStatus, onCaptureError } from '@/lib/tauri/audio';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface CaptureControlProps {
   interviewId: number | null;
@@ -77,7 +79,7 @@ export default function CaptureControl({
 
   if (!isTauriApp) {
     return (
-      <div className="text-xs text-gray-500 px-2 py-1">
+      <div className="text-xs text-muted-foreground px-2 py-1">
         Audio capture available in desktop app
       </div>
     );
@@ -86,25 +88,30 @@ export default function CaptureControl({
   return (
     <div className="flex items-center gap-2">
       {isRecording ? (
-        <button
+        <Button
           onClick={handleStop}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm font-medium rounded-lg transition-colors"
+          variant="destructive"
+          size="sm"
+          className="flex items-center gap-1.5"
         >
           <span className="w-2 h-2 bg-white rounded-sm" />
           Stop Recording
-        </button>
+        </Button>
       ) : (
-        <button
+        <Button
           onClick={handleStart}
           disabled={!interviewId || !config}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+          size="sm"
+          className="flex items-center gap-1.5 bg-purple-600 hover:bg-purple-700"
         >
           <span className="w-2 h-2 bg-red-400 rounded-full animate-pulse" />
           Start Recording
-        </button>
+        </Button>
       )}
       {error && (
-        <span className="text-xs text-red-400">{error}</span>
+        <Alert variant="destructive" className="py-1 px-2">
+          <AlertDescription className="text-xs">{error}</AlertDescription>
+        </Alert>
       )}
     </div>
   );

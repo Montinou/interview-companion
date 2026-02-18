@@ -3,6 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardCheck, Save, Star, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface Scorecard {
   attitude: number | null;
@@ -101,39 +105,41 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-6"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-indigo-500/10 p-2.5">
-            <ClipboardCheck className="h-5 w-5 text-indigo-600" />
+      <Card className="bg-card/50 backdrop-blur-sm">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-indigo-500/10 p-2.5">
+                <ClipboardCheck className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold">Scorecard</h2>
+                <p className="text-sm text-muted-foreground">
+                  {filledCount}/{CATEGORIES.length} evaluados
+                  {average && ` · Promedio: ${average}/10`}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={save}
+              disabled={saving}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : saved ? (
+                '✓ Guardado'
+              ) : (
+                <>
+                  <Save className="h-4 w-4" />
+                  Guardar
+                </>
+              )}
+            </Button>
           </div>
-          <div>
-            <h2 className="text-xl font-bold">Scorecard</h2>
-            <p className="text-sm text-muted-foreground">
-              {filledCount}/{CATEGORIES.length} evaluados
-              {average && ` · Promedio: ${average}/10`}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={save}
-          disabled={saving}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-        >
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : saved ? (
-            '✓ Guardado'
-          ) : (
-            <>
-              <Save className="h-4 w-4" />
-              Guardar
-            </>
-          )}
-        </button>
-      </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
 
       {/* Score Categories */}
       <div className="space-y-4">
@@ -180,36 +186,39 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
         })}
       </div>
 
-      {/* Recommendation */}
-      <div className="space-y-3">
-        <p className="text-sm font-medium">Recomendación</p>
-        <div className="flex gap-2 flex-wrap">
-          {RECOMMENDATIONS.map(rec => (
-            <button
-              key={rec.value}
-              onClick={() => setScorecard(prev => ({ ...prev, recommendation: rec.value }))}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                scorecard.recommendation === rec.value
-                  ? `${rec.color} text-white scale-105 shadow-md`
-                  : 'bg-muted/50 hover:bg-muted text-muted-foreground'
-              }`}
-            >
-              {rec.emoji} {rec.label}
-            </button>
-          ))}
-        </div>
-      </div>
+          {/* Recommendation */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Recomendación</p>
+            <div className="flex gap-2 flex-wrap">
+              {RECOMMENDATIONS.map(rec => (
+                <Badge
+                  key={rec.value}
+                  variant={scorecard.recommendation === rec.value ? 'default' : 'outline'}
+                  onClick={() => setScorecard(prev => ({ ...prev, recommendation: rec.value }))}
+                  className={`cursor-pointer px-4 py-2 text-sm font-medium transition-all ${
+                    scorecard.recommendation === rec.value
+                      ? `${rec.color} text-white scale-105 shadow-md`
+                      : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {rec.emoji} {rec.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
 
-      {/* Notes */}
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Notas</p>
-        <textarea
-          value={scorecard.notes || ''}
-          onChange={e => setScorecard(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Observaciones generales, contexto adicional, decisión final..."
-          className="w-full h-32 px-4 py-3 rounded-lg border bg-background text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-        />
-      </div>
+          {/* Notes */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Notas</p>
+            <Textarea
+              value={scorecard.notes || ''}
+              onChange={e => setScorecard(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Observaciones generales, contexto adicional, decisión final..."
+              className="h-32 resize-none"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

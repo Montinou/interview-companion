@@ -20,7 +20,22 @@ import {
   AlertTriangle,
   Users,
 } from 'lucide-react';
-import { Button } from '@/components/ui-button';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 function WindowsIcon({ className }: { className?: string }) {
   return (
@@ -295,18 +310,15 @@ export default async function Home() {
                 description: 'Evidence-based scoring only. Every flag comes with a direct quote from the transcript. No bias, no guessing.',
               },
             ].map((feature) => (
-              <div
-                key={feature.title}
-                className="group rounded-xl border border-border/30 bg-card/30 p-5 hover:border-primary/20 hover:bg-card/50 transition-all duration-300"
-              >
-                <div className="space-y-3">
+              <Card key={feature.title} className="group hover:border-primary/20 transition-all duration-300">
+                <CardContent className="space-y-3 pt-6">
                   <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                     <feature.icon className="h-4.5 w-4.5 text-primary" />
                   </div>
                   <h3 className="font-semibold">{feature.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </div>
@@ -444,16 +456,16 @@ export default async function Home() {
           <div className="space-y-4">
             <h3 className="text-xl font-semibold">How Interview Companion compares to alternatives</h3>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm border border-border/30 rounded-lg overflow-hidden">
-                <thead>
-                  <tr className="bg-muted/20">
-                    <th className="text-left p-3 font-medium text-muted-foreground">Feature</th>
-                    <th className="text-center p-3 font-medium text-primary">Interview Companion</th>
-                    <th className="text-center p-3 font-medium text-muted-foreground">Manual Notes</th>
-                    <th className="text-center p-3 font-medium text-muted-foreground">Recording + Review</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/20">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/20">
+                    <TableHead className="text-left">Feature</TableHead>
+                    <TableHead className="text-center text-primary">Interview Companion</TableHead>
+                    <TableHead className="text-center">Manual Notes</TableHead>
+                    <TableHead className="text-center">Recording + Review</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                   {[
                     ['Real-time transcription', '✅', '❌', '❌'],
                     ['Live AI analysis', '✅', '❌', '❌'],
@@ -463,15 +475,15 @@ export default async function Home() {
                     ['Works with any platform', '✅', '✅', '✅'],
                     ['No additional cost', '✅ Free', '✅ Free', '⚠️ Storage costs'],
                   ].map(([feature, ic, manual, recording]) => (
-                    <tr key={feature} className="hover:bg-muted/10">
-                      <td className="p-3 text-foreground">{feature}</td>
-                      <td className="p-3 text-center">{ic}</td>
-                      <td className="p-3 text-center">{manual}</td>
-                      <td className="p-3 text-center">{recording}</td>
-                    </tr>
+                    <TableRow key={feature} className="hover:bg-muted/10">
+                      <TableCell className="font-medium">{feature}</TableCell>
+                      <TableCell className="text-center">{ic}</TableCell>
+                      <TableCell className="text-center">{manual}</TableCell>
+                      <TableCell className="text-center">{recording}</TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                </TableBody>
+              </Table>
             </div>
           </div>
 
@@ -504,7 +516,7 @@ export default async function Home() {
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-center">
             Frequently Asked Questions
           </h2>
-          <div className="space-y-4">
+          <Accordion type="single" collapsible className="space-y-4">
             {[
               {
                 q: 'Is Interview Companion free?',
@@ -539,17 +551,16 @@ export default async function Home() {
                 a: 'Yes. Interview Companion supports organizations with team-based access. Team members share access to candidates, interview profiles, and scorecards within the same organization. You can invite members and manage roles through the dashboard.',
               },
             ].map((faq, i) => (
-              <details key={i} className="group border border-border/30 rounded-lg overflow-hidden">
-                <summary className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/10 transition-colors">
-                  <span className="font-medium text-foreground pr-4">{faq.q}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground group-open:rotate-90 transition-transform shrink-0" />
-                </summary>
-                <p className="px-4 pb-4 text-muted-foreground leading-relaxed">
+              <AccordionItem key={i} value={`item-${i}`}>
+                <AccordionTrigger className="text-left">
+                  {faq.q}
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground leading-relaxed">
                   {faq.a}
-                </p>
-              </details>
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </div>
       </section>
 

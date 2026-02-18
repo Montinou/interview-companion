@@ -2,6 +2,10 @@ import { redirect } from 'next/navigation';
 import { createInterview } from '@/app/actions/interviews';
 import Link from 'next/link';
 import { getOrgContext, AuthError } from '@/lib/auth';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
 export default async function NewInterviewPage() {
   try {
@@ -30,79 +34,72 @@ export default async function NewInterviewPage() {
         </div>
 
         <form action={createInterview} className="space-y-6">
-          <div className="p-6 rounded-xl border bg-card">
-            <h2 className="text-xl font-semibold mb-4">Candidate Information</h2>
-            
-            <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Candidate Information</h2>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <label htmlFor="candidateName" className="block text-sm font-medium mb-2">
+                <Label htmlFor="candidateName">
                   Full Name *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="candidateName"
                   name="candidateName"
                   required
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
                   placeholder="John Doe"
                 />
               </div>
 
               <div>
-                <label htmlFor="candidateEmail" className="block text-sm font-medium mb-2">
+                <Label htmlFor="candidateEmail">
                   Email *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="email"
                   id="candidateEmail"
                   name="candidateEmail"
                   required
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
                   placeholder="john@example.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="candidatePhone" className="block text-sm font-medium mb-2">
+                <Label htmlFor="candidatePhone">
                   Phone
-                </label>
-                <input
+                </Label>
+                <Input
                   type="tel"
                   id="candidatePhone"
                   name="candidatePhone"
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
                   placeholder="+1 234 567 8900"
                 />
               </div>
 
               <div>
-                <label htmlFor="jiraTicket" className="block text-sm font-medium mb-2">
+                <Label htmlFor="jiraTicket">
                   Jira Ticket (optional)
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   id="jiraTicket"
                   name="jiraTicket"
-                  className="w-full px-4 py-2 rounded-lg border bg-background"
                   placeholder="TI-7213"
                 />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           <div className="flex gap-4">
-            <Link
-              href="/dashboard/interviews"
-              className="flex-1 px-6 py-3 rounded-lg border text-center font-semibold hover:bg-accent transition-colors"
-            >
-              Cancel
-            </Link>
-            <button
-              type="submit"
-              className="flex-1 px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors"
-            >
+            <Button variant="outline" asChild className="flex-1">
+              <Link href="/dashboard/interviews">
+                Cancel
+              </Link>
+            </Button>
+            <Button type="submit" className="flex-1">
               Create Interview
-            </button>
+            </Button>
           </div>
         </form>
       </div>

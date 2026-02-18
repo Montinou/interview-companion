@@ -5,6 +5,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 const DIMS = [
   { key: 'attitude', label: 'Actitud', esKey: 'actitud' },
@@ -90,60 +92,63 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
   };
 
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-[#111118] p-4 space-y-2">
-      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider">
-        📊 AI Scorecard
-      </h3>
-      <div className="h-[280px]">
-        {hasScores ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
-              <PolarGrid stroke="#374151" />
-              <PolarAngleAxis 
-                dataKey="dim" 
-                tick={renderAxisTick}
-              />
-              <PolarRadiusAxis 
-                angle={90} 
-                domain={[0, 10]} 
-                tick={false}
-                axisLine={false}
-              />
-              <Radar 
-                dataKey="value" 
-                stroke="#8b5cf6" 
-                fill="#8b5cf6" 
-                fillOpacity={0.3} 
-                dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} 
-              />
-            </RadarChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex items-center justify-center text-gray-400 text-sm">
-            Esperando análisis AI...
-          </div>
+    <Card className="bg-card">
+      <CardContent className="p-4 space-y-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+          📊 AI Scorecard
+        </h3>
+        <div className="h-[280px]">
+          {hasScores ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
+                <PolarGrid stroke="hsl(var(--border))" />
+                <PolarAngleAxis 
+                  dataKey="dim" 
+                  tick={renderAxisTick}
+                />
+                <PolarRadiusAxis 
+                  angle={90} 
+                  domain={[0, 10]} 
+                  tick={false}
+                  axisLine={false}
+                />
+                <Radar 
+                  dataKey="value" 
+                  stroke="#8b5cf6" 
+                  fill="#8b5cf6" 
+                  fillOpacity={0.3} 
+                  dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} 
+                />
+              </RadarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              Esperando análisis AI...
+            </div>
+          )}
+        </div>
+        {/* Recommendation badges */}
+        <div className="flex gap-1">
+          {RECS.map(r => (
+            <Badge
+              key={r.key}
+              variant={rec === r.key ? 'default' : 'outline'}
+              className={`flex-1 justify-center text-[10px] font-medium transition-all ${
+                rec === r.key
+                  ? `${r.color} text-white ring-1 ring-white/30`
+                  : 'bg-muted/40 text-muted-foreground'
+              }`}
+            >
+              {r.label}
+            </Badge>
+          ))}
+        </div>
+        {scorecard?.justification && (
+          <p className="text-xs text-muted-foreground italic border-t border-border pt-2 mt-1">
+            {scorecard.justification}
+          </p>
         )}
-      </div>
-      {/* Recommendation pills */}
-      <div className="flex gap-1">
-        {RECS.map(r => (
-          <span
-            key={r.key}
-            className={`flex-1 py-1 rounded text-center text-[10px] font-medium transition-all ${
-              rec === r.key
-                ? `${r.color} text-white ring-1 ring-white/30`
-                : 'bg-gray-800/40 text-gray-500'
-            }`}
-          >
-            {r.label}
-          </span>
-        ))}
-      </div>
-      {scorecard?.justification && (
-        <p className="text-xs text-gray-400 italic border-t border-gray-700/50 pt-2 mt-1">
-          {scorecard.justification}
-        </p>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

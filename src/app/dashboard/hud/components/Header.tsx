@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { Badge } from '@/components/ui/badge';
 
 type Props = {
   candidateName: string;
@@ -27,20 +28,20 @@ export default function Header({ candidateName, jiraTicket, status, startTime, t
   const isLive = status === 'live';
 
   return (
-    <div className="h-10 flex items-center justify-between px-4 bg-[#111118] border-b border-gray-800 shrink-0">
+    <div className="h-10 flex items-center justify-between px-4 bg-card border-b border-border shrink-0">
       <div className="flex items-center gap-3">
-        <span className="text-white font-semibold">{candidateName}</span>
-        <span className="text-gray-500 text-sm">
+        <span className="text-foreground font-semibold">{candidateName}</span>
+        <span className="text-muted-foreground text-sm">
           · QA Automation{jiraTicket ? ` · ${jiraTicket}` : ''}
         </span>
       </div>
       <div className="flex items-center gap-4 text-sm">
-        <span className="text-gray-500">{transcriptCount} utt · {insightCount} insights</span>
-        <span className={`flex items-center gap-1 ${isLive ? 'text-green-400' : 'text-gray-400'}`}>
-          <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-gray-600'}`} />
+        <span className="text-muted-foreground">{transcriptCount} utt · {insightCount} insights</span>
+        <Badge variant={isLive ? "default" : "secondary"} className="flex items-center gap-1">
+          <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-green-400 animate-pulse' : 'bg-muted-foreground'}`} />
           {isLive ? 'Live' : status}
-        </span>
-        <span className="text-white font-mono">{elapsed}</span>
+        </Badge>
+        <span className="text-foreground font-mono">{elapsed}</span>
       </div>
     </div>
   );

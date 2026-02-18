@@ -12,7 +12,7 @@ import { NotesPanel } from '@/components/interview/NotesPanel';
 import { InterviewPlan } from '@/components/interview/InterviewPlan';
 import { InterviewGuide } from '@/components/interview/InterviewGuide';
 import { LiveTimer } from '@/components/interview/LiveTimer';
-import { Button } from '@/components/ui-button';
+import { Button } from '@/components/ui/button';
 import { TranscriptModalWrapper } from '@/components/interview/TranscriptModalWrapper';
 import { LiveCaptureWrapper } from '@/components/interview/LiveCaptureWrapper';
 
@@ -51,9 +51,9 @@ export default async function InterviewDetailPage({
   const c = interview.candidate;
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0f] text-gray-200 overflow-hidden">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Compact top bar */}
-      <header className="flex items-center justify-between px-4 py-2 border-b border-gray-800/50 bg-[#0d0d14] shrink-0">
+      <header className="flex items-center justify-between px-4 py-2 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-4">
           {/* Status dot + name */}
           <div className="flex items-center gap-2">
@@ -62,11 +62,11 @@ export default async function InterviewDetailPage({
               interview.status === 'scheduled' ? 'bg-yellow-500' : 'bg-green-500'
             }`} />
             <h1 className="text-base font-semibold text-white">{c.name}</h1>
-            <span className="text-xs text-gray-500">#{interview.id}</span>
+            <span className="text-xs text-muted-foreground">#{interview.id}</span>
           </div>
 
           {/* Candidate meta - compact */}
-          <div className="flex items-center gap-3 text-xs text-gray-400">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {c.jiraTicket && (
               <a
                 href={`https://distillery.atlassian.net/browse/${c.jiraTicket}`}

@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import ScoreCardCompare from '@/components/ScoreCardCompare';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const CANDIDATE_COLORS = [
   '#3b82f6', // blue
@@ -89,42 +92,46 @@ export default function ComparePage() {
         <h1 className="text-3xl font-bold mb-6 text-foreground">Compare Candidates</h1>
 
         {/* Selection Panel */}
-        <div className="bg-card rounded-xl border border-border p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-foreground">Select Candidates to Compare</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {interviews.map(interview => (
-              <label
-                key={interview.id}
-                className={`
-                  flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
-                  ${selectedIds.includes(interview.id)
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-border hover:border-muted-foreground/30'
-                  }
-                `}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(interview.id)}
-                  onChange={() => toggleInterview(interview.id)}
-                  className="w-4 h-4 accent-blue-500"
-                />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate text-foreground">{interview.candidateName}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(interview.createdAt).toLocaleDateString()}
+        <Card className="mb-6">
+          <CardHeader>
+            <h2 className="text-xl font-semibold text-foreground">Select Candidates to Compare</h2>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {interviews.map(interview => (
+                <Label
+                  key={interview.id}
+                  htmlFor={`interview-${interview.id}`}
+                  className={`
+                    flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
+                    ${selectedIds.includes(interview.id)
+                      ? 'border-blue-500 bg-blue-500/10'
+                      : 'border-border hover:border-muted-foreground/30'
+                    }
+                  `}
+                >
+                  <Checkbox
+                    id={`interview-${interview.id}`}
+                    checked={selectedIds.includes(interview.id)}
+                    onCheckedChange={() => toggleInterview(interview.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate text-foreground">{interview.candidateName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(interview.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
-                </div>
-              </label>
-            ))}
-          </div>
-
-          {interviews.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No completed interviews found
+                </Label>
+              ))}
             </div>
-          )}
-        </div>
+
+            {interviews.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No completed interviews found
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Comparison View */}
         {loading ? (

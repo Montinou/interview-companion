@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, AlertTriangle, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 
 interface StatsPanelProps {
   interviewId: number;
@@ -116,15 +117,16 @@ export function StatsPanel({ interviewId, startedAt, status }: StatsPanelProps) 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className={`p-4 rounded-xl border bg-gradient-to-br ${colors}`}
           >
-            <div className="flex items-center gap-2 mb-2">
-              <Icon className="h-4 w-4" />
-              <span className="text-xs font-medium text-muted-foreground">
-                {stat.label}
-              </span>
-            </div>
-            <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
+            <Card className={`p-4 bg-gradient-to-br ${colors}`}>
+              <div className="flex items-center gap-2 mb-2">
+                <Icon className="h-4 w-4" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  {stat.label}
+                </span>
+              </div>
+              <p className="text-2xl font-bold tabular-nums">{stat.value}</p>
+            </Card>
           </motion.div>
         );
       })}

@@ -3,6 +3,8 @@ import {
   Radar, RadarChart, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, ResponsiveContainer,
 } from 'recharts';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import type { Scorecard } from '../page';
 
 const DIMS = [
@@ -45,7 +47,7 @@ export default function RadarScorecard({ scorecard, dimensions }: Props) {
     const score = item?.value || 0;
     return (
       <g>
-        <text x={x} y={y} textAnchor={textAnchor} fill="#e2e8f0" fontSize={11} fontWeight={600} {...rest}>
+        <text x={x} y={y} textAnchor={textAnchor} fill="hsl(var(--foreground))" fontSize={11} fontWeight={600} {...rest}>
           {payload.value}
         </text>
         {hasScores && (
@@ -58,32 +60,34 @@ export default function RadarScorecard({ scorecard, dimensions }: Props) {
   };
 
   return (
-    <div className="bg-[#111118] rounded-lg border border-gray-800 flex flex-col h-full p-2">
-      <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">📊 AI Scorecard</h3>
-      <div className="flex-1 min-h-0">
-        <ResponsiveContainer width="100%" height="100%">
-          <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
-            <PolarGrid stroke="#374151" />
-            <PolarAngleAxis dataKey="dim" tick={renderAxisTick} />
-            <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
-            <Radar dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} />
-          </RadarChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="flex gap-1 px-1 pb-1">
-        {RECS.map(r => (
-          <button
-            key={r.key}
-            className={`flex-1 py-1 rounded text-[10px] font-medium transition-all ${
-              rec === r.key
-                ? `${r.color} text-white ring-1 ring-white/30`
-                : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
-            }`}
-          >
-            {r.label}
-          </button>
-        ))}
-      </div>
-    </div>
+    <Card className="flex flex-col h-full">
+      <CardContent className="flex flex-col h-full p-2">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1">📊 AI Scorecard</h3>
+        <div className="flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
+              <PolarGrid stroke="hsl(var(--border))" />
+              <PolarAngleAxis dataKey="dim" tick={renderAxisTick} />
+              <PolarRadiusAxis angle={90} domain={[0, 10]} tick={false} axisLine={false} />
+              <Radar dataKey="value" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.3} dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} />
+            </RadarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex gap-1 px-1 pb-1">
+          {RECS.map(r => (
+            <button
+              key={r.key}
+              className={`flex-1 py-1 rounded text-[10px] font-medium transition-all ${
+                rec === r.key
+                  ? `${r.color} text-white ring-1 ring-white/30`
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }

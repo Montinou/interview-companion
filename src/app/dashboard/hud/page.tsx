@@ -95,7 +95,7 @@ function dbInsightToHud(row: any): InsightEntry {
 
 export default function HudPage() {
   return (
-    <Suspense fallback={<div className="h-screen bg-[#0a0a0f] flex items-center justify-center text-gray-400">Loading HUD...</div>}>
+    <Suspense fallback={<div className="h-screen bg-background flex items-center justify-center text-muted-foreground">Loading HUD...</div>}>
       <HudContent />
     </Suspense>
   );
@@ -253,7 +253,7 @@ function HudContent() {
   const isLive = meta?.status === 'active';
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0f] overflow-hidden text-gray-200">
+    <div className="h-screen flex flex-col bg-background overflow-hidden text-foreground">
       {/* Header - fixed height */}
       <div className="shrink-0">
         <Header

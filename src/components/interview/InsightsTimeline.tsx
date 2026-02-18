@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Lightbulb, FileText, Clock } from 'lucide-react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
 
 interface Insight {
   id: number;
@@ -118,112 +122,116 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
   };
 
   return (
-    <div className="rounded-xl border border-gray-700/50 bg-[#111118] p-4 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-purple-500/15 p-2">
-            <Clock className="h-5 w-5 text-purple-400" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">Insights</h2>
-            <p className="text-xs text-gray-400">Timeline de observaciones</p>
-          </div>
-        </div>
-
-        {/* Filter Pills */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setFilter(null)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              filter === null
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            Todos
-          </button>
-          <button
-            onClick={() => setFilter('red-flag')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              filter === 'red-flag'
-                ? 'bg-red-600 text-white'
-                : 'bg-red-500/15 text-red-300 hover:bg-red-500/25'
-            }`}
-          >
-            🔴 {counts['red-flag']}
-          </button>
-          <button
-            onClick={() => setFilter('green-flag')}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-              filter === 'green-flag'
-                ? 'bg-emerald-600 text-white'
-                : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
-            }`}
-          >
-            🟢 {counts['green-flag']}
-          </button>
-        </div>
-      </div>
-
-      {/* Timeline */}
-      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
-        <AnimatePresence mode="popLayout">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full" />
+    <Card className="bg-card h-full flex flex-col">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-purple-500/15 p-2">
+              <Clock className="h-5 w-5 text-purple-400" />
             </div>
-          ) : filteredInsights.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-12 text-gray-500"
-            >
-              <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
-              <p className="text-gray-400">No hay observaciones todavía</p>
-              <p className="text-sm text-gray-500">Se generarán durante la entrevista</p>
-            </motion.div>
-          ) : (
-            filteredInsights.map((insight, index) => {
-              const config = typeConfig[insight.type as keyof typeof typeConfig] || typeConfig.note;
-              const Icon = config.icon;
+            <div>
+              <h2 className="text-base font-bold">Insights</h2>
+              <p className="text-xs text-muted-foreground">Timeline de observaciones</p>
+            </div>
+          </div>
 
-              return (
+          {/* Filter Badges */}
+          <div className="flex gap-2">
+            <Button
+              onClick={() => setFilter(null)}
+              variant={filter === null ? 'default' : 'outline'}
+              size="sm"
+              className="text-xs"
+            >
+              Todos
+            </Button>
+            <Badge
+              variant={filter === 'red-flag' ? 'default' : 'outline'}
+              className={`cursor-pointer px-3 py-1 text-xs ${
+                filter === 'red-flag'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-red-500/15 text-red-300 hover:bg-red-500/25'
+              }`}
+              onClick={() => setFilter('red-flag')}
+            >
+              🔴 {counts['red-flag']}
+            </Badge>
+            <Badge
+              variant={filter === 'green-flag' ? 'default' : 'outline'}
+              className={`cursor-pointer px-3 py-1 text-xs ${
+                filter === 'green-flag'
+                  ? 'bg-emerald-600 hover:bg-emerald-700'
+                  : 'bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25'
+              }`}
+              onClick={() => setFilter('green-flag')}
+            >
+              🟢 {counts['green-flag']}
+            </Badge>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-1 min-h-0">
+        <ScrollArea className="h-full pr-4">
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin h-6 w-6 border-2 border-purple-500 border-t-transparent rounded-full" />
+                </div>
+              ) : filteredInsights.length === 0 ? (
                 <motion.div
-                  key={insight.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ delay: index * 0.03 }}
-                  className={`p-3 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12 text-muted-foreground"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={`shrink-0 p-1.5 rounded-lg ${config.iconBg}`}>
-                      <Icon className={`h-4 w-4 ${config.iconColor}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${config.badgeColor}`}>
-                          {config.label}
-                        </span>
-                        {insight.topic && (
-                          <span className="text-[10px] text-gray-400">
-                            • {insight.topic}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm leading-relaxed text-gray-100">{insight.content}</p>
-                      <p className="text-[10px] text-gray-500 mt-1.5">
-                        {formatTime(insight.timestamp)}
-                      </p>
-                    </div>
-                  </div>
+                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p>No hay observaciones todavía</p>
+                  <p className="text-sm text-muted-foreground">Se generarán durante la entrevista</p>
                 </motion.div>
-              );
-            })
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+              ) : (
+                filteredInsights.map((insight, index) => {
+                  const config = typeConfig[insight.type as keyof typeof typeConfig] || typeConfig.note;
+                  const Icon = config.icon;
+
+                  return (
+                    <motion.div
+                      key={insight.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
+                      transition={{ delay: index * 0.03 }}
+                      className={`p-3 rounded-lg border-l-4 ${config.bgColor} ${config.borderColor}`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`shrink-0 p-1.5 rounded-lg ${config.iconBg}`}>
+                          <Icon className={`h-4 w-4 ${config.iconColor}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className={`text-[10px] ${config.badgeColor}`}>
+                              {config.label}
+                            </Badge>
+                            {insight.topic && (
+                              <span className="text-[10px] text-muted-foreground">
+                                • {insight.topic}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm leading-relaxed">{insight.content}</p>
+                          <p className="text-[10px] text-muted-foreground mt-1.5">
+                            {formatTime(insight.timestamp)}
+                          </p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </AnimatePresence>
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

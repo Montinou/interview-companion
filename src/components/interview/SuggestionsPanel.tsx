@@ -4,6 +4,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, Check, Sparkles, TrendingUp, Search } from 'lucide-react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface Suggestion {
   id: number;
@@ -180,118 +184,124 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
   const suggestions = allSuggestions;
 
   return (
-    <div className="rounded-xl border border-yellow-500/20 bg-[#111118] p-4 h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-4 shrink-0">
-        <div className="rounded-lg bg-yellow-500/15 p-2">
-          <Lightbulb className="h-5 w-5 text-yellow-500" />
+    <Card className="border-yellow-500/20 bg-card h-full flex flex-col">
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="rounded-lg bg-yellow-500/15 p-2">
+            <Lightbulb className="h-5 w-5 text-yellow-500" />
+          </div>
+          <div>
+            <h2 className="text-base font-bold flex items-center gap-2">
+              Sugerencias
+              <Sparkles className="h-4 w-4 text-yellow-500" />
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Preguntas y observaciones de la AI
+            </p>
+          </div>
         </div>
-        <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            Sugerencias
-            <Sparkles className="h-4 w-4 text-yellow-500" />
-          </h2>
-          <p className="text-xs text-gray-400">
-            Preguntas y observaciones de la AI
-          </p>
-        </div>
-      </div>
+      </CardHeader>
 
-      {/* Suggestions List */}
-      <div className="space-y-3 flex-1 min-h-0 overflow-y-auto pr-1">
-        <AnimatePresence mode="popLayout">
-          {loading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin h-6 w-6 border-2 border-yellow-500 border-t-transparent rounded-full" />
-            </div>
-          ) : suggestions.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-8"
-            >
-              <Lightbulb className="h-10 w-10 mx-auto mb-3 text-gray-600" />
-              <p className="text-gray-400">No hay sugerencias todavía</p>
-              <p className="text-sm text-gray-500">Aparecerán durante la entrevista</p>
-            </motion.div>
-          ) : (
-            suggestions.map((suggestion, index) => {
-              const content = extractReadableContent(suggestion);
-              const lines = content.split('\n').filter((l: string) => l.trim());
-              const isMultiLine = lines.length > 1;
-              const topicInfo = suggestion.topic ? TOPIC_LABELS[suggestion.topic] : null;
-              const isQuestion = QUESTION_TOPICS.includes(suggestion.topic || '');
-
-              return (
+      <CardContent className="flex-1 min-h-0">
+        <ScrollArea className="h-full pr-4">
+          <div className="space-y-3">
+            <AnimatePresence mode="popLayout">
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin h-6 w-6 border-2 border-yellow-500 border-t-transparent rounded-full" />
+                </div>
+              ) : suggestions.length === 0 ? (
                 <motion.div
-                  key={suggestion.id}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`p-3 rounded-lg border transition-all ${
-                    suggestion.used
-                      ? 'bg-green-900/20 border-green-500/20 opacity-60'
-                      : isQuestion
-                        ? 'bg-indigo-900/15 border-indigo-500/20 hover:border-indigo-500/40'
-                        : 'bg-gray-800/40 border-yellow-500/20 hover:border-yellow-500/40'
-                  }`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-8"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      {topicInfo ? (
-                        <span className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded-full mb-2 ${topicInfo.color}`}>
-                          {topicInfo.icon} {topicInfo.label}
-                        </span>
-                      ) : suggestion.topic && (
-                        <span className="inline-block text-[10px] font-medium text-yellow-400 bg-yellow-500/15 px-2 py-0.5 rounded-full mb-2">
-                          {suggestion.topic}
-                        </span>
-                      )}
-                      {isMultiLine ? (
-                        <ul className="space-y-1.5">
-                          {lines.map((line: string, i: number) => (
-                            <li key={i} className="text-sm text-gray-100 leading-relaxed flex gap-2">
-                              <span className={`shrink-0 ${isQuestion ? 'text-indigo-400' : 'text-yellow-500'}`}>
-                                {isQuestion ? '❓' : '•'}
-                              </span>
-                              <span>{line.replace(/^[-•*]\s*/, '')}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-gray-100 leading-relaxed">
-                          {isQuestion && <span className="text-indigo-400 mr-1">❓</span>}
-                          {content}
-                        </p>
-                      )}
-                      <p className="text-[10px] text-gray-500 mt-2">
-                        {formatTime(suggestion.timestamp)}
-                      </p>
-                    </div>
-                    
-                    {!suggestion.used && (
-                      <button
-                        onClick={() => markAsUsed(suggestion.id)}
-                        className="shrink-0 p-2 rounded-lg bg-green-500/10 hover:bg-green-500/20 text-green-400 transition-colors"
-                        title="Marcar como usada"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                    )}
-                    
-                    {suggestion.used && (
-                      <div className="shrink-0 p-2 text-green-400">
-                        <Check className="h-4 w-4" />
-                      </div>
-                    )}
-                  </div>
+                  <Lightbulb className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-60" />
+                  <p className="text-muted-foreground">No hay sugerencias todavía</p>
+                  <p className="text-sm text-muted-foreground">Aparecerán durante la entrevista</p>
                 </motion.div>
-              );
-            })
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
+              ) : (
+                suggestions.map((suggestion, index) => {
+                  const content = extractReadableContent(suggestion);
+                  const lines = content.split('\n').filter((l: string) => l.trim());
+                  const isMultiLine = lines.length > 1;
+                  const topicInfo = suggestion.topic ? TOPIC_LABELS[suggestion.topic] : null;
+                  const isQuestion = QUESTION_TOPICS.includes(suggestion.topic || '');
+
+                  return (
+                    <motion.div
+                      key={suggestion.id}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.05 }}
+                      className={`p-3 rounded-lg border transition-all ${
+                        suggestion.used
+                          ? 'bg-green-900/20 border-green-500/20 opacity-60'
+                          : isQuestion
+                            ? 'bg-indigo-900/15 border-indigo-500/20 hover:border-indigo-500/40'
+                            : 'bg-muted/40 border-yellow-500/20 hover:border-yellow-500/40'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          {topicInfo ? (
+                            <Badge variant="secondary" className={`text-[10px] mb-2 ${topicInfo.color}`}>
+                              {topicInfo.icon} {topicInfo.label}
+                            </Badge>
+                          ) : suggestion.topic && (
+                            <Badge variant="secondary" className="text-[10px] mb-2 text-yellow-400 bg-yellow-500/15">
+                              {suggestion.topic}
+                            </Badge>
+                          )}
+                          {isMultiLine ? (
+                            <ul className="space-y-1.5">
+                              {lines.map((line: string, i: number) => (
+                                <li key={i} className="text-sm leading-relaxed flex gap-2">
+                                  <span className={`shrink-0 ${isQuestion ? 'text-indigo-400' : 'text-yellow-500'}`}>
+                                    {isQuestion ? '❓' : '•'}
+                                  </span>
+                                  <span>{line.replace(/^[-•*]\s*/, '')}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-sm leading-relaxed">
+                              {isQuestion && <span className="text-indigo-400 mr-1">❓</span>}
+                              {content}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-muted-foreground mt-2">
+                            {formatTime(suggestion.timestamp)}
+                          </p>
+                        </div>
+                        
+                        {!suggestion.used && (
+                          <Button
+                            onClick={() => markAsUsed(suggestion.id)}
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0 p-2 h-auto bg-green-500/10 hover:bg-green-500/20 text-green-400"
+                            title="Marcar como usada"
+                          >
+                            <Check className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        {suggestion.used && (
+                          <div className="shrink-0 p-2 text-green-400">
+                            <Check className="h-4 w-4" />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
+              )}
+            </AnimatePresence>
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

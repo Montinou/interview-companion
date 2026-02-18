@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Clock, User, CheckCircle, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Map of icon names to components - icons must be defined in client component
 const iconMap = {
@@ -51,49 +52,52 @@ export function StatsCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
       whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
-      className={cn(
-        'relative overflow-hidden rounded-xl border bg-gradient-to-br p-6 backdrop-blur-sm',
-        colorClasses[color]
-      )}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-muted-foreground mb-1">{label}</p>
-          <motion.p
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.3, delay: delay + 0.1 }}
-            className="text-3xl font-bold tracking-tight"
-          >
-            {value}
-          </motion.p>
-          {subtitle && (
-            <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+      <Card className={cn(
+        'relative overflow-hidden bg-gradient-to-br backdrop-blur-sm',
+        colorClasses[color]
+      )}>
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-1">{label}</p>
+              <motion.p
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 0.3, delay: delay + 0.1 }}
+                className="text-3xl font-bold tracking-tight"
+              >
+                {value}
+              </motion.p>
+              {subtitle && (
+                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              )}
+            </div>
+            <motion.div
+              initial={{ rotate: -180, opacity: 0 }}
+              animate={{ rotate: 0, opacity: 1 }}
+              transition={{ duration: 0.5, delay: delay + 0.2 }}
+              className={cn('rounded-lg p-3', `bg-${color}-500/10`)}
+            >
+              <Icon className="h-6 w-6" />
+            </motion.div>
+          </div>
+          
+          {trend && (
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: '100%' }}
+              transition={{ duration: 0.6, delay: delay + 0.3 }}
+              className={cn(
+                'absolute bottom-0 left-0 h-1',
+                trend === 'up' && 'bg-green-500',
+                trend === 'down' && 'bg-red-500',
+                trend === 'neutral' && 'bg-gray-500'
+              )}
+            />
           )}
-        </div>
-        <motion.div
-          initial={{ rotate: -180, opacity: 0 }}
-          animate={{ rotate: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: delay + 0.2 }}
-          className={cn('rounded-lg p-3', `bg-${color}-500/10`)}
-        >
-          <Icon className="h-6 w-6" />
-        </motion.div>
-      </div>
-      
-      {trend && (
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: '100%' }}
-          transition={{ duration: 0.6, delay: delay + 0.3 }}
-          className={cn(
-            'absolute bottom-0 left-0 h-1',
-            trend === 'up' && 'bg-green-500',
-            trend === 'down' && 'bg-red-500',
-            trend === 'neutral' && 'bg-gray-500'
-          )}
-        />
-      )}
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }

@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { Card } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { InterviewGuide } from '@/components/interview/InterviewGuide';
 import { InterviewPlan } from '@/components/interview/InterviewPlan';
 import NotesPanel from './NotesPanel';
-
-type Tab = 'plan' | 'guide' | 'notes';
 
 interface PlanGuideTabbedProps {
   interviewId: number | null;
@@ -22,47 +21,46 @@ export default function PlanGuideTabbed({
   jiraTicket,
   profile,
 }: PlanGuideTabbedProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('plan');
-
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: 'plan', label: 'Plan', icon: '📋' },
-    { id: 'guide', label: 'Guide', icon: '📖' },
-    { id: 'notes', label: 'Notes', icon: '📝' },
-  ];
-
   return (
-    <div className="bg-[#111118] rounded-lg border border-gray-800 flex flex-col h-full">
-      {/* Tab buttons */}
-      <div className="flex border-b border-gray-800 shrink-0">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
-              activeTab === tab.id
-                ? 'bg-gray-800 text-gray-200 border-b-2 border-indigo-500'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800/50'
-            }`}
+    <Card className="flex flex-col h-full p-0 overflow-hidden">
+      <Tabs defaultValue="plan" className="flex flex-col h-full">
+        <TabsList className="w-full rounded-none border-b border-border shrink-0 h-auto p-0 bg-transparent">
+          <TabsTrigger 
+            value="plan" 
+            className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs font-semibold uppercase tracking-wider"
           >
-            <span className="mr-1">{tab.icon}</span>
-            {tab.label}
-          </button>
-        ))}
-      </div>
+            <span className="mr-1">📋</span>
+            Plan
+          </TabsTrigger>
+          <TabsTrigger 
+            value="guide" 
+            className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs font-semibold uppercase tracking-wider"
+          >
+            <span className="mr-1">📖</span>
+            Guide
+          </TabsTrigger>
+          <TabsTrigger 
+            value="notes" 
+            className="flex-1 rounded-none data-[state=active]:border-b-2 data-[state=active]:border-primary text-xs font-semibold uppercase tracking-wider"
+          >
+            <span className="mr-1">📝</span>
+            Notes
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Tab content */}
-      <div className="flex-1 min-h-0 overflow-hidden">
-        {activeTab === 'plan' && interviewId && (
-          <div className="h-full overflow-y-auto">
-            <InterviewPlan interviewId={interviewId} />
-          </div>
-        )}
-        {activeTab === 'plan' && !interviewId && (
-          <div className="h-full flex items-center justify-center text-gray-500 text-sm">
-            No interview selected
-          </div>
-        )}
-        {activeTab === 'guide' && (
+        <TabsContent value="plan" className="flex-1 min-h-0 m-0 overflow-hidden">
+          {interviewId ? (
+            <div className="h-full overflow-y-auto">
+              <InterviewPlan interviewId={interviewId} />
+            </div>
+          ) : (
+            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+              No interview selected
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="guide" className="flex-1 min-h-0 m-0 overflow-hidden">
           <div className="h-full overflow-y-auto">
             <InterviewGuide
               candidateName={candidateName}
@@ -71,13 +69,14 @@ export default function PlanGuideTabbed({
               profile={profile}
             />
           </div>
-        )}
-        {activeTab === 'notes' && (
+        </TabsContent>
+
+        <TabsContent value="notes" className="flex-1 min-h-0 m-0 overflow-hidden">
           <div className="h-full">
             <NotesPanel />
           </div>
-        )}
-      </div>
-    </div>
+        </TabsContent>
+      </Tabs>
+    </Card>
   );
 }

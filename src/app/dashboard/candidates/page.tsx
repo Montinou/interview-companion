@@ -5,6 +5,8 @@ import { getOrgContext, AuthError } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { CandidateActions } from './CandidateActions';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 
 export default async function CandidatesPage() {
   let orgId: string;
@@ -48,13 +50,15 @@ export default async function CandidatesPage() {
       </div>
 
       {allCandidates.length === 0 ? (
-        <div className="bg-card rounded-lg border border-border p-12 text-center">
-          <p className="text-muted-foreground text-lg mb-2">No hay candidatos aún</p>
-          <p className="text-muted-foreground/70 text-sm">
-            Los candidatos se crean automáticamente al iniciar una entrevista,
-            o podés subir un CV para crear uno nuevo.
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <p className="text-muted-foreground text-lg mb-2">No hay candidatos aún</p>
+            <p className="text-muted-foreground/70 text-sm">
+              Los candidatos se crean automáticamente al iniciar una entrevista,
+              o podés subir un CV para crear uno nuevo.
+            </p>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4">
           {allCandidates.map((c) => {
@@ -63,62 +67,65 @@ export default async function CandidatesPage() {
               <Link
                 key={c.id}
                 href={`/dashboard/candidates/${c.id}`}
-                className="bg-card hover:bg-accent/50 rounded-lg border border-border p-4 transition-colors block"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-foreground font-medium text-lg">{c.name}</h3>
-                      {cvAnalysis?.seniority && (
-                        <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded capitalize">
-                          {cvAnalysis.seniority}
-                        </span>
-                      )}
-                      {c.cvUrl && (
-                        <span className="bg-green-500/20 text-green-400 text-xs px-2 py-0.5 rounded">
-                          CV ✓
-                        </span>
-                      )}
-                    </div>
-                    {c.email && (
-                      <p className="text-muted-foreground text-sm mt-1">{c.email}</p>
-                    )}
+                <Card className="hover:bg-accent/50 transition-colors">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <h3 className="text-foreground font-medium text-lg">{c.name}</h3>
+                          {cvAnalysis?.seniority && (
+                            <Badge variant="secondary" className="capitalize">
+                              {cvAnalysis.seniority}
+                            </Badge>
+                          )}
+                          {c.cvUrl && (
+                            <Badge className="bg-green-500/20 text-green-400 hover:bg-green-500/30">
+                              CV ✓
+                            </Badge>
+                          )}
+                        </div>
+                        {c.email && (
+                          <p className="text-muted-foreground text-sm mt-1">{c.email}</p>
+                        )}
 
-                    {/* Tech stack from CV analysis */}
-                    {cvAnalysis?.tech_stack?.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {cvAnalysis.tech_stack.slice(0, 8).map((tech: string) => (
-                          <span key={tech} className="bg-blue-500/15 text-blue-400 text-xs px-1.5 py-0.5 rounded">
-                            {tech}
-                          </span>
-                        ))}
-                        {cvAnalysis.tech_stack.length > 8 && (
-                          <span className="text-muted-foreground text-xs">
-                            +{cvAnalysis.tech_stack.length - 8} más
-                          </span>
+                        {/* Tech stack from CV analysis */}
+                        {cvAnalysis?.tech_stack?.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {cvAnalysis.tech_stack.slice(0, 8).map((tech: string) => (
+                              <Badge key={tech} variant="outline" className="bg-blue-500/15 text-blue-400 border-blue-500/30">
+                                {tech}
+                              </Badge>
+                            ))}
+                            {cvAnalysis.tech_stack.length > 8 && (
+                              <span className="text-muted-foreground text-xs">
+                                +{cvAnalysis.tech_stack.length - 8} más
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Pre-flags */}
+                        {cvAnalysis?.flags?.filter((f: any) => f.severity === 'red').length > 0 && (
+                          <p className="text-red-400 text-xs mt-2">
+                            🔴 {cvAnalysis.flags.filter((f: any) => f.severity === 'red').length} red flag{cvAnalysis.flags.filter((f: any) => f.severity === 'red').length > 1 ? 's' : ''} detectado{cvAnalysis.flags.filter((f: any) => f.severity === 'red').length > 1 ? 's' : ''}
+                          </p>
                         )}
                       </div>
-                    )}
 
-                    {/* Pre-flags */}
-                    {cvAnalysis?.flags?.filter((f: any) => f.severity === 'red').length > 0 && (
-                      <p className="text-red-400 text-xs mt-2">
-                        🔴 {cvAnalysis.flags.filter((f: any) => f.severity === 'red').length} red flag{cvAnalysis.flags.filter((f: any) => f.severity === 'red').length > 1 ? 's' : ''} detectado{cvAnalysis.flags.filter((f: any) => f.severity === 'red').length > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="text-right text-sm">
-                    <p className="text-muted-foreground">
-                      {Number(c.interviewCount)} entrevista{Number(c.interviewCount) !== 1 ? 's' : ''}
-                    </p>
-                    {c.lastInterviewDate && (
-                      <p className="text-muted-foreground/70 text-xs mt-1">
-                        Última: {new Date(c.lastInterviewDate).toLocaleDateString('es-AR')}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                      <div className="text-right text-sm">
+                        <p className="text-muted-foreground">
+                          {Number(c.interviewCount)} entrevista{Number(c.interviewCount) !== 1 ? 's' : ''}
+                        </p>
+                        {c.lastInterviewDate && (
+                          <p className="text-muted-foreground/70 text-xs mt-1">
+                            Última: {new Date(c.lastInterviewDate).toLocaleDateString('es-AR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             );
           })}

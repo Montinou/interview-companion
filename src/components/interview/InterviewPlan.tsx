@@ -2,6 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { ChevronDown, ChevronRight, Clock, CheckCircle2, Circle } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Badge } from '@/components/ui/badge';
 
 interface Question {
   id: number;
@@ -89,121 +94,129 @@ export function InterviewPlan({ interviewId }: InterviewPlanProps) {
     acc + s.topics.reduce((a, t) => a + t.questions.filter(q => q.asked).length, 0), 0);
 
   return (
-    <div className="rounded-lg border border-gray-800 bg-[#111118] flex flex-col h-full">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-800 shrink-0">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-          📋 Plan de Entrevista
-        </h3>
-        <span className="text-[10px] text-gray-500">
-          {askedQuestions}/{totalQuestions} preguntadas
-        </span>
-      </div>
+    <Card className="border-border bg-card flex flex-col h-full">
+      <CardHeader className="py-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs uppercase tracking-wider">
+            📋 Plan de Entrevista
+          </CardTitle>
+          <span className="text-[10px] text-muted-foreground">
+            {askedQuestions}/{totalQuestions} preguntadas
+          </span>
+        </div>
+      </CardHeader>
 
-      <div className="flex-1 overflow-y-auto min-h-0 p-1.5 space-y-1">
-        {sections.length === 0 && (
-          <div className="flex items-center justify-center h-full text-gray-600 text-xs">
-            Sin plan cargado
-          </div>
-        )}
+      <CardContent className="flex-1 min-h-0 p-1.5">
+        <ScrollArea className="h-full">
+          <div className="space-y-1 pr-2">
+            {sections.length === 0 && (
+              <div className="flex items-center justify-center h-32 text-muted-foreground text-xs">
+                Sin plan cargado
+              </div>
+            )}
 
-        {sections.map(section => {
-          const isExpanded = expandedSection === section.id;
-          const sectionAsked = section.topics.reduce((a, t) => a + t.questions.filter(q => q.asked).length, 0);
-          const sectionTotal = section.topics.reduce((a, t) => a + t.questions.length, 0);
+            {sections.map(section => {
+              const isExpanded = expandedSection === section.id;
+              const sectionAsked = section.topics.reduce((a, t) => a + t.questions.filter(q => q.asked).length, 0);
+              const sectionTotal = section.topics.reduce((a, t) => a + t.questions.length, 0);
 
-          return (
-            <div key={section.id} className="rounded border border-gray-800/50">
-              <button
-                onClick={() => setExpandedSection(isExpanded ? null : section.id)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-gray-800/30 transition-colors"
-              >
-                {isExpanded ? (
-                  <ChevronDown className="h-3 w-3 text-gray-500 shrink-0" />
-                ) : (
-                  <ChevronRight className="h-3 w-3 text-gray-500 shrink-0" />
-                )}
-                <span className="text-xs font-medium text-gray-200 flex-1 truncate">
-                  {section.name}
-                </span>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  {section.duration_min && (
-                    <span className="text-[10px] text-gray-600 flex items-center gap-0.5">
-                      <Clock className="h-2.5 w-2.5" /> {section.duration_min}m
-                    </span>
-                  )}
-                  <span className="text-[10px] text-gray-500">{sectionAsked}/{sectionTotal}</span>
-                </div>
-              </button>
-
-              {isExpanded && (
-                <div className="px-2 pb-2 space-y-1.5">
-                  {section.topics.map(topic => (
-                    <div key={topic.id} className="space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                          topic.priority === 'high' ? 'bg-red-400' :
-                          topic.priority === 'medium' ? 'bg-yellow-400' : 'bg-gray-500'
-                        }`} />
-                        <span className="text-[11px] font-medium text-gray-300">{topic.name}</span>
+              return (
+                <Collapsible
+                  key={section.id}
+                  open={isExpanded}
+                  onOpenChange={() => setExpandedSection(isExpanded ? null : section.id)}
+                  className="rounded border border-border/50"
+                >
+                  <CollapsibleTrigger asChild>
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/30 transition-colors">
+                      {isExpanded ? (
+                        <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="text-xs font-medium flex-1 truncate">
+                        {section.name}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {section.duration_min && (
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                            <Clock className="h-2.5 w-2.5" /> {section.duration_min}m
+                          </span>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] px-1">
+                          {sectionAsked}/{sectionTotal}
+                        </Badge>
                       </div>
+                    </button>
+                  </CollapsibleTrigger>
 
-                      {topic.questions.map(q => (
-                        <div
-                          key={q.id}
-                          className={`ml-3 rounded px-2 py-1 cursor-pointer transition-all ${
-                            q.asked
-                              ? 'bg-green-500/5 border border-green-500/20'
-                              : 'bg-gray-800/30 border border-transparent hover:border-indigo-500/30'
-                          }`}
-                          onClick={() => setExpandedQuestion(expandedQuestion === q.id ? null : q.id)}
-                        >
-                          <div className="flex items-start gap-1.5">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); if (!q.asked) markAsked(q.id); }}
-                              className="shrink-0 mt-0.5"
-                            >
-                              {q.asked ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <Circle className="h-3 w-3 text-gray-600 hover:text-indigo-400" />
-                              )}
-                            </button>
-                            <p className={`text-[11px] leading-tight ${
-                              q.asked ? 'text-gray-500' : 'text-gray-200'
-                            }`}>
-                              {q.question}
-                            </p>
-                          </div>
-
-                          {expandedQuestion === q.id && (
-                            <div className="mt-1.5 ml-4.5 space-y-1 text-[10px]">
-                              {q.purpose && (
-                                <p className="text-indigo-300/70">
-                                  <span className="text-gray-500">Por qué: </span>{q.purpose}
-                                </p>
-                              )}
-                              {q.expected_signals && (
-                                <p className="text-yellow-300/60">
-                                  <span className="text-gray-500">Señales: </span>{q.expected_signals}
-                                </p>
-                              )}
-                              {q.follow_ups && (
-                                <p className="text-cyan-300/60">
-                                  <span className="text-gray-500">Follow-up: </span>{q.follow_ups}
-                                </p>
-                              )}
-                            </div>
-                          )}
+                  <CollapsibleContent className="px-2 pb-2 space-y-1.5">
+                    {section.topics.map(topic => (
+                      <div key={topic.id} className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                            topic.priority === 'high' ? 'bg-red-400' :
+                            topic.priority === 'medium' ? 'bg-yellow-400' : 'bg-muted-foreground'
+                          }`} />
+                          <span className="text-[11px] font-medium">{topic.name}</span>
                         </div>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+
+                        {topic.questions.map(q => (
+                          <div
+                            key={q.id}
+                            className={`ml-3 rounded px-2 py-1 cursor-pointer transition-all ${
+                              q.asked
+                                ? 'bg-green-500/5 border border-green-500/20'
+                                : 'bg-muted/30 border border-transparent hover:border-primary/30'
+                            }`}
+                            onClick={() => setExpandedQuestion(expandedQuestion === q.id ? null : q.id)}
+                          >
+                            <div className="flex items-start gap-1.5">
+                              <Checkbox
+                                checked={q.asked}
+                                onCheckedChange={(checked) => {
+                                  if (checked && !q.asked) markAsked(q.id);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="mt-0.5"
+                              />
+                              <p className={`text-[11px] leading-tight flex-1 ${
+                                q.asked ? 'text-muted-foreground line-through' : ''
+                              }`}>
+                                {q.question}
+                              </p>
+                            </div>
+
+                            {expandedQuestion === q.id && (
+                              <div className="mt-1.5 ml-6 space-y-1 text-[10px]">
+                                {q.purpose && (
+                                  <p className="text-indigo-300/70">
+                                    <span className="text-muted-foreground">Por qué: </span>{q.purpose}
+                                  </p>
+                                )}
+                                {q.expected_signals && (
+                                  <p className="text-yellow-300/60">
+                                    <span className="text-muted-foreground">Señales: </span>{q.expected_signals}
+                                  </p>
+                                )}
+                                {q.follow_ups && (
+                                  <p className="text-cyan-300/60">
+                                    <span className="text-muted-foreground">Follow-up: </span>{q.follow_ups}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

@@ -15,6 +15,11 @@ import {
   Zap,
   Users
 } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 
 interface PhaseSection {
   id: string;
@@ -247,166 +252,144 @@ export function InterviewGuide({
   ];
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-[#111118] backdrop-blur-sm overflow-hidden h-full flex flex-col">
-      {/* Header */}
-      <div className="p-3 border-b border-gray-800/50 shrink-0">
+    <Card className="border-border bg-card backdrop-blur-sm overflow-hidden h-full flex flex-col">
+      <CardHeader className="py-3">
         <div className="flex items-center gap-2">
           <div className="rounded-lg bg-indigo-500/10 p-1.5">
             <BookOpen className="h-4 w-4 text-indigo-400" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-white">Interview Guide</h3>
-            <p className="text-[10px] text-gray-500">Step-by-step preparation</p>
+            <h3 className="text-sm font-semibold">Interview Guide</h3>
+            <p className="text-[10px] text-muted-foreground">Step-by-step preparation</p>
           </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
-        {/* Candidate Summary Card */}
-        <div className="rounded-lg border border-gray-800 bg-[#0d0d14] p-3 space-y-2">
-          <div className="flex items-center gap-2 mb-2">
-            <User className="h-3.5 w-3.5 text-blue-400" />
-            <h4 className="text-xs font-semibold text-white">Candidate Summary</h4>
-          </div>
-          <div className="space-y-1 text-[10px] text-gray-400">
-            {hasValidCandidateData ? (
-              <>
-                <p className="text-white font-medium text-[11px]">
-                  {candidateName}
-                  {candidateTitle && ` — ${candidateTitle}`}
-                </p>
-                {candidateEmail && <p>• {candidateEmail}</p>}
-                {candidatePhone && <p>• {candidatePhone}</p>}
-                {jiraTicket && (
-                  <p>
-                    • Jira:{' '}
-                    <a
-                      href={`https://distillery.atlassian.net/browse/${jiraTicket}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline"
-                    >
-                      {jiraTicket}
-                    </a>
-                  </p>
+      <CardContent className="flex-1 min-h-0 p-0">
+        <ScrollArea className="h-full px-3">
+          <div className="space-y-3 py-3">
+            {/* Candidate Summary Card */}
+            <Card className="bg-card/50">
+              <CardHeader className="py-3">
+                <div className="flex items-center gap-2">
+                  <User className="h-3.5 w-3.5 text-blue-400" />
+                  <h4 className="text-xs font-semibold">Candidate Summary</h4>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-1 text-[10px] text-muted-foreground pt-0">
+                {hasValidCandidateData ? (
+                  <>
+                    <p className="font-medium text-[11px] text-foreground">
+                      {candidateName}
+                      {candidateTitle && ` — ${candidateTitle}`}
+                    </p>
+                    {candidateEmail && <p>• {candidateEmail}</p>}
+                    {candidatePhone && <p>• {candidatePhone}</p>}
+                    {jiraTicket && (
+                      <p>
+                        • Jira:{' '}
+                        <a
+                          href={`https://distillery.atlassian.net/browse/${jiraTicket}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:underline"
+                        >
+                          {jiraTicket}
+                        </a>
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="italic">No candidate data loaded</p>
                 )}
-              </>
-            ) : (
-              <p className="text-gray-500 italic">No candidate data loaded</p>
-            )}
-          </div>
-        </div>
+              </CardContent>
+            </Card>
 
-        {/* Interview Phases */}
-        <div className="space-y-2">
-          {phases.map((phase) => {
-            const isExpanded = expandedPhases.includes(phase.id);
-            const Icon = phase.icon;
+            {/* Interview Phases */}
+            <Accordion type="multiple" value={expandedPhases} onValueChange={setExpandedPhases} className="space-y-2">
+              {phases.map((phase) => {
+                const Icon = phase.icon;
 
-            return (
-              <div key={phase.id} className="rounded-lg border border-gray-800 bg-[#0d0d14] overflow-hidden">
-                {/* Phase Header */}
-                <button
-                  onClick={() => togglePhase(phase.id)}
-                  className="w-full p-2.5 flex items-center justify-between hover:bg-gray-800/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="rounded bg-indigo-500/10 p-1">
-                      <Icon className="h-3.5 w-3.5 text-indigo-400" />
-                    </div>
-                    <div className="text-left">
+                return (
+                  <AccordionItem key={phase.id} value={phase.id} className="border rounded-lg bg-card/50">
+                    <AccordionTrigger className="px-3 py-2.5 hover:no-underline hover:bg-muted/30">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white">{phase.title}</span>
+                        <div className="rounded bg-indigo-500/10 p-1">
+                          <Icon className="h-3.5 w-3.5 text-indigo-400" />
+                        </div>
+                        <span className="text-xs font-semibold">{phase.title}</span>
                         {phase.duration && (
-                          <span className="text-[10px] text-gray-500">({phase.duration})</span>
+                          <Badge variant="outline" className="text-[10px]">
+                            {phase.duration}
+                          </Badge>
                         )}
                       </div>
-                    </div>
-                  </div>
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-500" />
-                  )}
-                </button>
-
-                {/* Phase Content */}
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-3 pt-0 space-y-3">
-                        {phase.blocks?.map((block, blockIdx) => (
-                          <div key={blockIdx} className="space-y-2">
-                            {block.title && (
-                              <h5 className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
-                                {block.title}
-                              </h5>
-                            )}
-                            <div className="space-y-2">
-                              {block.questions.map((q, qIdx) => (
-                                <div key={qIdx} className="space-y-1">
-                                  {q.text && (
-                                    <p className="text-[11px] text-white font-medium leading-relaxed">
-                                      {q.text}
-                                    </p>
-                                  )}
-                                  {q.listen && (
-                                    <p className="text-[10px] text-gray-500 pl-2 border-l-2 border-gray-700">
-                                      → {q.listen}
-                                    </p>
-                                  )}
-                                  {q.note && (
-                                    <p className="text-[10px] text-blue-400 italic">
-                                      {q.note}
-                                    </p>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="px-3 pb-3 space-y-3">
+                      {phase.blocks?.map((block, blockIdx) => (
+                        <div key={blockIdx} className="space-y-2">
+                          {block.title && (
+                            <h5 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                              {block.title}
+                            </h5>
+                          )}
+                          <div className="space-y-2">
+                            {block.questions.map((q, qIdx) => (
+                              <div key={qIdx} className="space-y-1">
+                                {q.text && (
+                                  <p className="text-[11px] font-medium leading-relaxed">
+                                    {q.text}
+                                  </p>
+                                )}
+                                {q.listen && (
+                                  <p className="text-[10px] text-muted-foreground pl-2 border-l-2 border-border">
+                                    → {q.listen}
+                                  </p>
+                                )}
+                                {q.note && (
+                                  <p className="text-[10px] text-blue-400 italic">
+                                    {q.note}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            );
-          })}
-        </div>
+                        </div>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
 
-        {/* Red Flags */}
-        <div className="rounded-lg border border-red-900/30 bg-red-950/20 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
-            <h4 className="text-xs font-semibold text-red-400">Red Flags</h4>
-          </div>
-          <ul className="space-y-1 text-[10px] text-gray-400">
-            {redFlags.map((flag, idx) => (
-              <li key={idx}>• {flag}</li>
-            ))}
-          </ul>
-        </div>
+            {/* Red Flags */}
+            <Alert variant="destructive" className="border-red-900/30 bg-red-950/20">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle className="text-xs">Red Flags</AlertTitle>
+              <AlertDescription>
+                <ul className="space-y-1 text-[10px] mt-2">
+                  {redFlags.map((flag, idx) => (
+                    <li key={idx}>• {flag}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
 
-        {/* Green Flags */}
-        <div className="rounded-lg border border-green-900/30 bg-green-950/20 p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-400" />
-            <h4 className="text-xs font-semibold text-green-400">Green Flags Expected</h4>
+            {/* Green Flags */}
+            <Alert className="border-green-900/30 bg-green-950/20 text-green-400">
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertTitle className="text-xs">Green Flags Expected</AlertTitle>
+              <AlertDescription className="text-green-300/70">
+                <ul className="space-y-1 text-[10px] mt-2">
+                  {greenFlags.map((flag, idx) => (
+                    <li key={idx}>• {flag}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
           </div>
-          <ul className="space-y-1 text-[10px] text-gray-400">
-            {greenFlags.map((flag, idx) => (
-              <li key={idx}>• {flag}</li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
   );
 }

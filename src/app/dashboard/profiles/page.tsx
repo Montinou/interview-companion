@@ -4,6 +4,20 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Calendar, Hash, Sparkles, Loader2 } from 'lucide-react';
 import type { InterviewProfile } from '@/lib/db/schema';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function ProfilesPage() {
   const [profiles, setProfiles] = useState<InterviewProfile[]>([]);
@@ -28,8 +42,6 @@ export default function ProfilesPage() {
   };
 
   const deleteProfile = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this profile?')) return;
-
     setDeletingId(id);
     try {
       const response = await fetch(`/api/profiles/${id}`, {
@@ -66,103 +78,126 @@ export default function ProfilesPage() {
             </h1>
             <p className="text-muted-foreground">Reusable templates for different roles</p>
           </div>
-          <Link
-            href="/dashboard/profiles/new"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
-          >
-            <Plus className="h-5 w-5" />
-            New Profile
-          </Link>
+          <Button asChild className="bg-purple-600 hover:bg-purple-700">
+            <Link href="/dashboard/profiles/new">
+              <Plus className="h-5 w-5" />
+              New Profile
+            </Link>
+          </Button>
         </div>
 
         {profiles.length === 0 ? (
-          <div className="bg-card border border-border rounded-xl p-12 text-center">
-            <Sparkles className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">No profiles yet</h3>
-            <p className="text-muted-foreground/70 mb-6">
-              Create your first interview profile to get started
-            </p>
-            <Link
-              href="/dashboard/profiles/new"
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
-            >
-              <Plus className="h-5 w-5" />
-              Create Profile
-            </Link>
-          </div>
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Sparkles className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2 text-muted-foreground">No profiles yet</h3>
+              <p className="text-muted-foreground/70 mb-6">
+                Create your first interview profile to get started
+              </p>
+              <Button asChild className="bg-purple-600 hover:bg-purple-700">
+                <Link href="/dashboard/profiles/new">
+                  <Plus className="h-5 w-5" />
+                  Create Profile
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {profiles.map((profile) => (
-              <div
+              <Card
                 key={profile.id}
-                className="bg-card border border-border rounded-xl p-6 hover:border-purple-500/50 transition-all group"
+                className="hover:border-purple-500/50 transition-all group"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1 text-foreground">{profile.name}</h3>
-                    {profile.seniority && (
-                      <p className="text-sm text-muted-foreground">{profile.seniority} level</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => deleteProfile(profile.id)}
-                    disabled={deletingId === profile.id}
-                    className="text-muted-foreground/50 hover:text-red-400 transition-colors disabled:opacity-50"
-                  >
-                    {deletingId === profile.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{profile.description}</p>
-
-                <div className="space-y-2 mb-4">
-                  {profile.techStack && profile.techStack.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {profile.techStack.slice(0, 3).map((tech, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-blue-600/20 text-blue-400 border border-blue-600/30 px-2 py-0.5 rounded text-xs"
-                        >
-                          {tech}
-                        </span>
-                      ))}
-                      {profile.techStack.length > 3 && (
-                        <span className="text-xs text-muted-foreground px-2 py-0.5">
-                          +{profile.techStack.length - 3} more
-                        </span>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-1 text-foreground">{profile.name}</h3>
+                      {profile.seniority && (
+                        <p className="text-sm text-muted-foreground">{profile.seniority} level</p>
                       )}
                     </div>
-                  )}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          disabled={deletingId === profile.id}
+                          className="text-muted-foreground/50 hover:text-red-400 transition-colors disabled:opacity-50"
+                        >
+                          {deletingId === profile.id ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-5 w-5" />
+                          )}
+                        </button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete the profile.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => deleteProfile(profile.id)}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardHeader>
 
-                  {profile.evaluationDimensions && profile.evaluationDimensions.length > 0 && (
-                    <div className="text-xs text-muted-foreground">
-                      {profile.evaluationDimensions.length} evaluation dimensions
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{profile.description}</p>
+
+                  <div className="space-y-2">
+                    {profile.techStack && profile.techStack.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {profile.techStack.slice(0, 3).map((tech, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="bg-blue-600/20 text-blue-400 border-blue-600/30"
+                          >
+                            {tech}
+                          </Badge>
+                        ))}
+                        {profile.techStack.length > 3 && (
+                          <span className="text-xs text-muted-foreground px-2 py-0.5">
+                            +{profile.techStack.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {profile.evaluationDimensions && profile.evaluationDimensions.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        {profile.evaluationDimensions.length} evaluation dimensions
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+
+                <CardFooter className="flex-col gap-4">
+                  <div className="flex items-center justify-between w-full pt-4 border-t border-border text-xs text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Hash className="h-3 w-3" />
+                      Used {profile.usageCount || 0} times
                     </div>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-border text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Hash className="h-3 w-3" />
-                    Used {profile.usageCount || 0} times
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {new Date(profile.createdAt).toLocaleDateString()}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(profile.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
 
-                <Link
-                  href={`/dashboard/profiles/${profile.id}`}
-                  className="mt-4 w-full bg-muted hover:bg-accent text-center py-2 rounded-lg text-sm transition-colors block text-foreground"
-                >
-                  View Details
-                </Link>
-              </div>
+                  <Button variant="secondary" asChild className="w-full">
+                    <Link href={`/dashboard/profiles/${profile.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </CardFooter>
+              </Card>
             ))}
           </div>
         )}
