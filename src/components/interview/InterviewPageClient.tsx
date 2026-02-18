@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 type LanguageCode = 'es' | 'en' | 'multi';
 
@@ -56,7 +57,6 @@ export function InterviewPageClient({
   const handleLanguageChange = useCallback(
     async (newLang: LanguageCode) => {
       setLanguage(newLang);
-      // Persist to DB (non-blocking)
       try {
         await updateLanguageAction(interview.id, newLang);
       } catch (e) {
@@ -67,9 +67,9 @@ export function InterviewPageClient({
   );
 
   return (
-    <div className="bg-background">
-      <div className="max-w-[1800px] mx-auto p-4 lg:p-6 space-y-6">
-        {/* Back Link */}
+    <div className="h-full flex flex-col overflow-hidden">
+      {/* Fixed top section: back link + header */}
+      <div className="shrink-0 px-4 lg:px-6 pt-4 space-y-4">
         <Link
           href="/dashboard/interviews"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -78,7 +78,6 @@ export function InterviewPageClient({
           Volver a Entrevistas
         </Link>
 
-        {/* Live Header with Language Switcher */}
         <LiveHeader
           candidateName={interview.candidate.name}
           position={
@@ -91,162 +90,169 @@ export function InterviewPageClient({
           language={language}
           onLanguageChange={handleLanguageChange}
         />
+      </div>
 
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-          {/* Left Column - Candidate Info & Actions */}
-          <div className="xl:col-span-3 space-y-6">
-            {/* Candidate Card */}
-            <Card className="bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
-                    <User className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1">
-                    <CardTitle className="text-base">Candidato</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      Entrevista #{interview.id}
-                    </p>
-                  </div>
-                  <Badge variant={
-                    interview.status === 'live' ? 'default' :
-                    interview.status === 'completed' ? 'secondary' :
-                    'outline'
-                  }>
-                    {interview.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <Separator />
-              <CardContent className="pt-6 space-y-3">
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Nombre</p>
-                  <p className="font-medium">{interview.candidate.name}</p>
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                    <Mail className="h-3 w-3" />
-                    Email
-                  </div>
-                  <p className="text-sm font-medium break-all">
-                    {interview.candidate.email}
-                  </p>
-                </div>
-                {interview.candidate.phone && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Phone className="h-3 w-3" />
-                      Teléfono
+      {/* Main grid — fills remaining viewport, each column scrolls internally */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-4 px-4 lg:px-6 py-4">
+
+        {/* Left Column - Candidate Info & Actions (scroll on small screens) */}
+        <div className="xl:col-span-3 min-h-0">
+          <ScrollArea className="h-full">
+            <div className="space-y-4 pr-3">
+              {/* Candidate Card */}
+              <Card className="bg-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
+                      <User className="h-5 w-5 text-blue-600" />
                     </div>
-                    <p className="text-sm font-medium">
-                      {interview.candidate.phone}
-                    </p>
-                  </div>
-                )}
-                {interview.candidate.jiraTicket && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <FileText className="h-3 w-3" />
-                      Jira Ticket
+                    <div className="flex-1">
+                      <CardTitle className="text-base">Candidato</CardTitle>
+                      <p className="text-xs text-muted-foreground">
+                        Entrevista #{interview.id}
+                      </p>
                     </div>
-                    <a
-                      href={`https://distillery.atlassian.net/browse/${interview.candidate.jiraTicket}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm font-mono font-medium text-blue-600 hover:underline"
-                    >
-                      {interview.candidate.jiraTicket}
-                    </a>
-                  </div>
-                )}
-                {interview.scheduledAt && (
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Calendar className="h-3 w-3" />
-                      Agendada
-                    </div>
-                    <p className="text-sm font-medium">
-                      {new Date(interview.scheduledAt).toLocaleDateString(
-                        'es-AR',
-                        {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'long',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }
-                      )}
-                    </p>
-                  </div>
-                )}
-                {interview.profile && (
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Perfil</p>
-                    <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
-                      {interview.profile.name}
-                      {interview.profile.seniority && ` · ${interview.profile.seniority}`}
+                    <Badge variant={
+                      interview.status === 'live' ? 'default' :
+                      interview.status === 'completed' ? 'secondary' :
+                      'outline'
+                    }>
+                      {interview.status}
                     </Badge>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Actions */}
-            <Card className="bg-card/50 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-base">Acciones</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {interview.status === 'scheduled' && (
-                  <form
-                    action={() => updateStatusAction(interview.id, 'live')}
-                    className="w-full"
-                  >
-                    <Button type="submit" className="w-full" size="lg">
-                      <Play className="h-4 w-4" />
-                      Iniciar Entrevista
-                    </Button>
-                  </form>
-                )}
-
-                {interview.status === 'live' && (
-                  <form
-                    action={() => updateStatusAction(interview.id, 'completed')}
-                    className="w-full"
-                  >
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      variant="default"
-                    >
-                      <CheckCircle className="h-4 w-4" />
-                      Finalizar Entrevista
-                    </Button>
-                  </form>
-                )}
-
-                {interview.status === 'completed' && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                    <p className="font-medium text-green-600">
-                      Entrevista completada
-                    </p>
-                    {interview.completedAt && (
-                      <p className="text-sm">
-                        {new Date(interview.completedAt).toLocaleString('es-AR')}
-                      </p>
-                    )}
+                </CardHeader>
+                <Separator />
+                <CardContent className="pt-4 space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Nombre</p>
+                    <p className="font-medium">{interview.candidate.name}</p>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                  <div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                      <Mail className="h-3 w-3" />
+                      Email
+                    </div>
+                    <p className="text-sm font-medium break-all">
+                      {interview.candidate.email}
+                    </p>
+                  </div>
+                  {interview.candidate.phone && (
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Phone className="h-3 w-3" />
+                        Teléfono
+                      </div>
+                      <p className="text-sm font-medium">
+                        {interview.candidate.phone}
+                      </p>
+                    </div>
+                  )}
+                  {interview.candidate.jiraTicket && (
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <FileText className="h-3 w-3" />
+                        Jira Ticket
+                      </div>
+                      <a
+                        href={`https://distillery.atlassian.net/browse/${interview.candidate.jiraTicket}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-mono font-medium text-blue-600 hover:underline"
+                      >
+                        {interview.candidate.jiraTicket}
+                      </a>
+                    </div>
+                  )}
+                  {interview.scheduledAt && (
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                        <Calendar className="h-3 w-3" />
+                        Agendada
+                      </div>
+                      <p className="text-sm font-medium">
+                        {new Date(interview.scheduledAt).toLocaleDateString(
+                          'es-AR',
+                          {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'long',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          }
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {interview.profile && (
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Perfil</p>
+                      <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+                        {interview.profile.name}
+                        {interview.profile.seniority && ` · ${interview.profile.seniority}`}
+                      </Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Center Column - Main Content */}
-          <div className="xl:col-span-6 space-y-6">
-            {/* Stats Panel */}
+              {/* Actions */}
+              <Card className="bg-card/50 backdrop-blur-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Acciones</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {interview.status === 'scheduled' && (
+                    <form
+                      action={() => updateStatusAction(interview.id, 'live')}
+                      className="w-full"
+                    >
+                      <Button type="submit" className="w-full" size="lg">
+                        <Play className="h-4 w-4" />
+                        Iniciar Entrevista
+                      </Button>
+                    </form>
+                  )}
+
+                  {interview.status === 'live' && (
+                    <form
+                      action={() => updateStatusAction(interview.id, 'completed')}
+                      className="w-full"
+                    >
+                      <Button
+                        type="submit"
+                        className="w-full"
+                        size="lg"
+                        variant="default"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Finalizar Entrevista
+                      </Button>
+                    </form>
+                  )}
+
+                  {interview.status === 'completed' && (
+                    <div className="text-center py-4 text-muted-foreground">
+                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                      <p className="font-medium text-green-600">
+                        Entrevista completada
+                      </p>
+                      {interview.completedAt && (
+                        <p className="text-sm">
+                          {new Date(interview.completedAt).toLocaleString('es-AR')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* Center Column — Insights + Scorecard with internal scroll */}
+        <div className="xl:col-span-6 min-h-0 flex flex-col gap-4">
+          {/* Stats — compact, no scroll needed */}
+          <div className="shrink-0">
             <ErrorBoundary name="Stats">
               <StatsPanel
                 interviewId={interview.id}
@@ -254,28 +260,31 @@ export function InterviewPageClient({
                 status={interview.status}
               />
             </ErrorBoundary>
-
-            {/* Insights Timeline */}
-            <ErrorBoundary name="Insights">
-              <InsightsTimeline interviewId={interview.id} isLive={isLive} />
-            </ErrorBoundary>
-
-            {/* Scorecard (visible after interview starts) */}
-            {interview.status !== 'scheduled' && (
-              <ErrorBoundary name="Scorecard">
-                <ScorecardPanel interviewId={interview.id} />
-              </ErrorBoundary>
-            )}
           </div>
 
-          {/* Right Column - Suggestions */}
-          <div className="xl:col-span-3">
-            <div className="sticky top-6">
-              <ErrorBoundary name="Suggestions">
-                <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+          {/* Insights + Scorecard — share remaining space, each scrolls internally */}
+          <div className="flex-1 min-h-0 flex flex-col gap-4">
+            <div className="flex-1 min-h-0">
+              <ErrorBoundary name="Insights">
+                <InsightsTimeline interviewId={interview.id} isLive={isLive} />
               </ErrorBoundary>
             </div>
+
+            {interview.status !== 'scheduled' && (
+              <div className="shrink-0 max-h-[40%] overflow-y-auto rounded-lg">
+                <ErrorBoundary name="Scorecard">
+                  <ScorecardPanel interviewId={interview.id} />
+                </ErrorBoundary>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Right Column - Suggestions (scroll internal) */}
+        <div className="xl:col-span-3 min-h-0">
+          <ErrorBoundary name="Suggestions">
+            <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+          </ErrorBoundary>
         </div>
       </div>
 
