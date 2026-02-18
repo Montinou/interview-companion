@@ -1,8 +1,8 @@
-import { currentUser } from '@clerk/nextjs/server';
 import { redirect, notFound } from 'next/navigation';
 import { db } from '@/lib/db';
 import { interviews } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
+import { getOrgContext, AuthError } from '@/lib/auth';
 import { Play, CheckCircle } from 'lucide-react';
 import { updateInterviewStatus } from '@/app/actions/interviews';
 import { RadarScorecard } from '@/components/interview/RadarScorecard';
@@ -27,14 +27,20 @@ export default async function InterviewDetailPage({
 }: {
   searchParams: Promise<{ id?: string }>;
 }) {
-  const user = await currentUser();
-  const { id } = await searchParams;
+  let orgId: string;
+  try {
+    const ctx = await getOrgContext();
+    orgId = ctx.orgId;
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/sign-in');
+    throw e;
+  }
 
-  if (!user) redirect('/sign-in');
+  const { id } = await searchParams;
   if (!id) redirect('/dashboard/interviews');
 
   const interview = await db.query.interviews.findFirst({
-    where: eq(interviews.id, parseInt(id)),
+    where: and(eq(interviews.id, parseInt(id)), eq(interviews.orgId, orgId)),
     with: { candidate: true, interviewer: true },
   });
 

@@ -3,7 +3,7 @@
 import { db } from '@/lib/db';
 import { interviews, candidates, users } from '@/lib/db/schema';
 import { currentUser } from '@clerk/nextjs/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getOrgContext } from '@/lib/auth';
@@ -39,7 +39,7 @@ export async function createInterview(formData: FormData) {
   const jiraTicket = formData.get('jiraTicket') as string | null;
 
   let candidate = await db.query.candidates.findFirst({
-    where: eq(candidates.email, candidateEmail),
+    where: and(eq(candidates.email, candidateEmail), eq(candidates.orgId, orgId)),
   });
 
   if (!candidate) {
@@ -69,11 +69,7 @@ export async function updateInterviewStatus(
   interviewId: number,
   status: 'scheduled' | 'live' | 'completed' | 'cancelled'
 ) {
-  const user = await currentUser();
-  
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
+  const { orgId } = await getOrgContext();
 
   await db.update(interviews)
     .set({ 
@@ -82,7 +78,7 @@ export async function updateInterviewStatus(
       ...(status === 'live' ? { startedAt: new Date() } : {}),
       ...(status === 'completed' ? { completedAt: new Date() } : {}),
     })
-    .where(eq(interviews.id, interviewId));
+    .where(and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)));
 
   revalidatePath(`/dashboard/interviews/${interviewId}`);
   revalidatePath('/dashboard/interviews');
@@ -92,18 +88,14 @@ export async function updateInterviewLanguage(
   interviewId: number,
   language: string
 ) {
-  const user = await currentUser();
-  
-  if (!user) {
-    throw new Error('Unauthorized');
-  }
+  const { orgId } = await getOrgContext();
 
   await db.update(interviews)
     .set({ 
       language,
       updatedAt: new Date(),
     })
-    .where(eq(interviews.id, interviewId));
+    .where(and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)));
 
   revalidatePath(`/dashboard/interviews/${interviewId}`);
 }
