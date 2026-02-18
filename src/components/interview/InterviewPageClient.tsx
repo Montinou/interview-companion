@@ -30,6 +30,10 @@ interface InterviewData {
     phone: string | null;
     jiraTicket: string | null;
   };
+  profile?: {
+    name: string;
+    seniority: string | null;
+  } | null;
 }
 
 interface InterviewPageClientProps {
@@ -174,6 +178,15 @@ export function InterviewPageClient({
                         }
                       )}
                     </p>
+                  </div>
+                )}
+                {interview.profile && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Perfil</p>
+                    <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+                      {interview.profile.name}
+                      {interview.profile.seniority && ` · ${interview.profile.seniority}`}
+                    </Badge>
                   </div>
                 )}
               </CardContent>

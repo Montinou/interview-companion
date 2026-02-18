@@ -18,11 +18,12 @@ export default async function InterviewsPage() {
       redirect('/sign-in');
     }
 
-    // Get org-scoped interviews (all interviews in the organization)
+    // Get org-scoped interviews with candidate + profile
     const userInterviews = await db.query.interviews.findMany({
       where: eq(interviews.orgId, orgId),
       with: {
         candidate: true,
+        profile: true,
       },
       orderBy: (interviews, { desc }) => [desc(interviews.createdAt)],
     });
@@ -64,7 +65,7 @@ export default async function InterviewsPage() {
             {userInterviews.map((interview) => (
               <Link
                 key={interview.id}
-                href={`/dashboard/live-interview?id=${interview.id}`}
+                href={interview.status === 'live' ? `/dashboard/live-interview?id=${interview.id}` : `/dashboard/interviews/${interview.id}`}
               >
                 <Card className="hover:bg-accent/50 transition-colors">
                   <CardContent className="pt-6">
@@ -73,9 +74,16 @@ export default async function InterviewsPage() {
                         <h3 className="font-semibold text-lg">
                           {interview.candidate.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {interview.candidate.email}
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="text-sm text-muted-foreground">
+                            {interview.candidate.email}
+                          </p>
+                          {interview.profile && (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/30 text-xs">
+                              {interview.profile.name}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right">
                         <Badge
@@ -90,16 +98,18 @@ export default async function InterviewsPage() {
                             interview.status === 'completed'
                               ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
                               : interview.status === 'live'
-                              ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20'
+                              ? 'bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 animate-pulse'
                               : interview.status === 'scheduled'
                               ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
-                              : 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20'
+                              : 'bg-muted text-muted-foreground'
                           }
                         >
                           {interview.status}
                         </Badge>
                         <p className="text-xs text-muted-foreground mt-2">
-                          {new Date(interview.createdAt).toLocaleDateString()}
+                          {new Date(interview.createdAt).toLocaleDateString('es-AR', {
+                            day: 'numeric', month: 'short', year: 'numeric',
+                          })}
                         </p>
                       </div>
                     </div>

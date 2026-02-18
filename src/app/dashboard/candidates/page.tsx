@@ -26,15 +26,13 @@ export default async function CandidatesPage() {
       cvUrl: candidates.cvUrl,
       cvData: candidates.cvData,
       createdAt: candidates.createdAt,
-      interviewCount: sql<number>`(
-        SELECT count(*) FROM interviews WHERE interviews.candidate_id = ${candidates.id}
-      )`.as('interview_count'),
-      lastInterviewDate: sql<string>`(
-        SELECT MAX(interviews.created_at) FROM interviews WHERE interviews.candidate_id = ${candidates.id}
-      )`.as('last_interview_date'),
+      interviewCount: sql<number>`count(${interviews.id})`.as('interview_count'),
+      lastInterviewDate: sql<string>`max(${interviews.createdAt})`.as('last_interview_date'),
     })
     .from(candidates)
+    .leftJoin(interviews, eq(interviews.candidateId, candidates.id))
     .where(eq(candidates.orgId, orgId))
+    .groupBy(candidates.id, candidates.name, candidates.email, candidates.cvUrl, candidates.cvData, candidates.createdAt)
     .orderBy(desc(candidates.createdAt));
 
   return (

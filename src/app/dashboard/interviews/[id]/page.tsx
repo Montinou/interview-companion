@@ -27,6 +27,7 @@ export default async function InterviewDetailPage({
     with: {
       candidate: true,
       interviewer: true,
+      profile: true,
     },
   });
 
@@ -48,6 +49,10 @@ export default async function InterviewDetailPage({
       phone: interview.candidate.phone,
       jiraTicket: interview.candidate.jiraTicket,
     },
+    profile: interview.profile ? {
+      name: interview.profile.name,
+      seniority: interview.profile.seniority,
+    } : null,
   };
 
   return (

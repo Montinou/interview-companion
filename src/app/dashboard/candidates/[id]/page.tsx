@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { candidates, interviews, scorecards } from '@/lib/db/schema';
+import { candidates, interviews, scorecards, interviewProfiles } from '@/lib/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { getOrgContext, AuthError } from '@/lib/auth';
 import { redirect, notFound } from 'next/navigation';
@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { CVUploader } from '@/components/cv/CVUploader';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 export default async function CandidateDetailPage({
   params,
@@ -56,15 +57,24 @@ export default async function CandidateDetailPage({
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">{candidate.name}</h1>
-        <div className="flex items-center gap-4 mt-2">
-          {candidate.email && <p className="text-muted-foreground">{candidate.email}</p>}
-          {candidate.phone && <p className="text-muted-foreground">{candidate.phone}</p>}
-          {candidate.jiraTicket && (
-            <Badge className="bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
-              {candidate.jiraTicket}
-            </Badge>
-          )}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">{candidate.name}</h1>
+            <div className="flex items-center gap-4 mt-2">
+              {candidate.email && <p className="text-muted-foreground">{candidate.email}</p>}
+              {candidate.phone && <p className="text-muted-foreground">{candidate.phone}</p>}
+              {candidate.jiraTicket && (
+                <Badge className="bg-purple-500/20 text-purple-400 hover:bg-purple-500/30">
+                  {candidate.jiraTicket}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <Button asChild>
+            <Link href={`/dashboard/interviews/new?candidateId=${candidate.id}`}>
+              + Nueva Entrevista
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -195,7 +205,7 @@ export default async function CandidateDetailPage({
               {interviewHistory.map((int) => (
                 <Link
                   key={int.id}
-                  href={`/dashboard/interviews/${int.id}`}
+                  href={int.status === 'live' ? `/dashboard/live-interview?id=${int.id}` : `/dashboard/interviews/${int.id}`}
                 >
                   <Card className="hover:bg-accent/50 transition-colors">
                     <CardContent className="pt-6">

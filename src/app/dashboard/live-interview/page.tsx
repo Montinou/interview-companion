@@ -1,6 +1,6 @@
 import { redirect, notFound } from 'next/navigation';
 import { db } from '@/lib/db';
-import { interviews } from '@/lib/db/schema';
+import { interviews, interviewProfiles } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { getOrgContext, AuthError } from '@/lib/auth';
 import { Play, CheckCircle } from 'lucide-react';
@@ -42,13 +42,14 @@ export default async function InterviewDetailPage({
 
   const interview = await db.query.interviews.findFirst({
     where: and(eq(interviews.id, parseInt(id)), eq(interviews.orgId, orgId)),
-    with: { candidate: true, interviewer: true },
+    with: { candidate: true, interviewer: true, profile: true },
   });
 
   if (!interview) notFound();
 
   const isLive = interview.status === 'live';
   const c = interview.candidate;
+  const profile = interview.profile;
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -155,6 +156,14 @@ export default async function InterviewDetailPage({
             candidateEmail={c.email || undefined}
             candidatePhone={c.phone || undefined}
             jiraTicket={c.jiraTicket || undefined}
+            profile={profile ? {
+              name: profile.name,
+              seniority: profile.seniority || undefined,
+              description: profile.description,
+              redFlags: profile.redFlags || undefined,
+              greenFlags: profile.greenFlags || undefined,
+              interviewStructure: profile.interviewStructure || undefined,
+            } : undefined}
           />
         </div>
 
