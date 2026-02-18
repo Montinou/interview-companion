@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, User, Mic, X } from 'lucide-react';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 
 interface TranscriptEntry {
   id: number;
@@ -25,6 +26,7 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastIdRef = useRef<number | null>(null);
   const initialLoadDone = useRef(false);
+  const panelRef = useFocusTrap<HTMLDivElement>(isOpen, onClose);
 
   const fetchTranscript = useCallback(async () => {
     try {
@@ -114,15 +116,20 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
             exit={{ opacity: 0 }}
             onClick={onClose}
             className="fixed inset-0 bg-black/50 z-40"
+            aria-hidden="true"
           />
 
           {/* Slide-over Panel */}
           <motion.div
+            ref={panelRef}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 h-full w-[600px] bg-[#111118] border-l border-gray-800 z-50 flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Transcript panel"
           >
             {/* Header */}
             <div className="p-4 border-b border-gray-800/50 flex items-center justify-between shrink-0">
