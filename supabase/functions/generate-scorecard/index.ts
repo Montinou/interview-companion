@@ -24,27 +24,35 @@ class KimiProvider implements AIProvider {
   }
 
   async analyze(prompt: string, maxTokens = 4096): Promise<string> {
-    const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.1,
-      }),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000) // P0: 30s timeout
 
-    if (!response.ok) {
-      const err = await response.text()
-      throw new Error(`Kimi API error ${response.status}: ${err}`)
+    try {
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const err = await response.text()
+        throw new Error(`Kimi API error ${response.status}: ${err}`)
+      }
+
+      const data = await response.json()
+      return data.choices[0].message.content
+    } finally {
+      clearTimeout(timeout)
     }
-
-    const data = await response.json()
-    return data.choices[0].message.content
   }
 }
 
@@ -57,38 +65,73 @@ class CerebrasProvider implements AIProvider {
   }
 
   async analyze(prompt: string, maxTokens = 4096): Promise<string> {
-    const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.1,
-      }),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000) // P0: 30s timeout
 
-    if (!response.ok) {
-      const err = await response.text()
-      throw new Error(`Cerebras API error ${response.status}: ${err}`)
+    try {
+      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const err = await response.text()
+        throw new Error(`Cerebras API error ${response.status}: ${err}`)
+      }
+
+      const data = await response.json()
+      return data.choices[0].message.content
+    } finally {
+      clearTimeout(timeout)
     }
-
-    const data = await response.json()
-    return data.choices[0].message.content
   }
 }
 
-function getAIProvider(): AIProvider {
+// P0: AIManager with failover (replaces single-provider getAIProvider)
+class AIManager {
+  private providers: AIProvider[]
+
+  constructor(providers: AIProvider[]) {
+    this.providers = providers
+  }
+
+  async analyze(prompt: string, maxTokens = 4096): Promise<{ result: string; provider: string }> {
+    for (const provider of this.providers) {
+      try {
+        const result = await provider.analyze(prompt, maxTokens)
+        return { result, provider: provider.name }
+      } catch (e) {
+        console.warn(`${provider.name} failed: ${e.message}, trying next...`)
+      }
+    }
+    throw new Error("All AI providers exhausted")
+  }
+}
+
+function buildAIManager(): AIManager {
+  const providers: AIProvider[] = []
+
   const kimiKey = Deno.env.get("MOONSHOT_API_KEY")
-  if (kimiKey) return new KimiProvider(kimiKey)
+  if (kimiKey) providers.push(new KimiProvider(kimiKey))
 
   const cerebrasKey = Deno.env.get("CEREBRAS_API_KEY")
-  if (cerebrasKey) return new CerebrasProvider(cerebrasKey)
+  if (cerebrasKey) providers.push(new CerebrasProvider(cerebrasKey))
 
-  throw new Error("No AI provider configured")
+  if (providers.length === 0) {
+    throw new Error("No AI providers configured. Set MOONSHOT_API_KEY or CEREBRAS_API_KEY.")
+  }
+
+  return new AIManager(providers)
 }
 
 Deno.serve(async (req) => {
@@ -203,7 +246,7 @@ ${dims.length ? `\nEvaluation dimensions: ${dims.map((d: any) => `${d.label} (we
     const role = interview.job_positions?.title || "Unknown"
 
     // 6. Generate scorecard with AI (uses full transcript — this is the ONE time we send everything)
-    const ai = getAIProvider()
+    const ai = buildAIManager()
 
     // Build dynamic score format based on profile dimensions
     let scoreFormat = `{
@@ -257,7 +300,8 @@ Rules:
 - The recommendation is a suggestion, not a decision
 - JSON only, no markdown.`
 
-    const result = await ai.analyze(prompt, 4096)
+    const { result, provider: usedProvider } = await ai.analyze(prompt, 4096)
+    console.log(`Scorecard generated by ${usedProvider}`)
 
     // 7. Parse scorecard
     let scorecard: Record<string, unknown>

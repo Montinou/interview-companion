@@ -23,7 +23,7 @@ const TARGET_SAMPLE_RATE: u32 = 16000;
 const TARGET_CHANNELS: u16 = 1;
 
 pub fn get_status() -> serde_json::Value {
-    json!({ "isRecording": IS_RECORDING.load(Ordering::Relaxed) })
+    json!({ "isRecording": IS_RECORDING.load(Ordering::Acquire) })
 }
 
 pub fn list_devices() -> Result<Vec<serde_json::Value>, anyhow::Error> {
@@ -47,7 +47,8 @@ pub async fn start_capture(
     interview_id: i64,
     config: serde_json::Value,
 ) -> Result<String, anyhow::Error> {
-    if IS_RECORDING.load(Ordering::Relaxed) {
+    // P0 fix: atomic compare_exchange prevents race condition between concurrent calls
+    if IS_RECORDING.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_err() {
         return Err(anyhow::anyhow!("Already recording"));
     }
 
@@ -65,7 +66,7 @@ pub async fn start_capture(
     let (stop_tx, stop_rx) = mpsc::channel::<()>(1);
     *STOP_TX.lock().unwrap() = Some(stop_tx);
 
-    IS_RECORDING.store(true, Ordering::Relaxed);
+    // IS_RECORDING already set to true by compare_exchange above
 
     // Mixed audio channel — both mic and system audio send PCM16 mono 16kHz here
     let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>(200);
@@ -125,6 +126,9 @@ pub async fn start_capture(
         "systemAudio": cfg!(target_os = "macos") 
     }));
 
+    // P0 fix: drop original audio_tx so audio_rx sees channel close when all producers finish
+    drop(audio_tx);
+
     // === WebSocket + analysis on tokio ===
     let app_ws = app.clone();
     tokio::spawn(async move {
@@ -137,7 +141,7 @@ pub async fn start_capture(
             log::error!("WebSocket error: {}", e);
             let _ = app_ws.emit("capture-error", json!({ "error": e.to_string() }));
         }
-        IS_RECORDING.store(false, Ordering::Relaxed);
+        IS_RECORDING.store(false, Ordering::Release);
         let _ = app_ws.emit("capture-stopped", json!({}));
     });
 
@@ -145,14 +149,14 @@ pub async fn start_capture(
 }
 
 pub async fn stop_capture(_app: tauri::AppHandle) -> Result<String, anyhow::Error> {
-    if !IS_RECORDING.load(Ordering::Relaxed) {
+    if !IS_RECORDING.load(Ordering::Acquire) {
         return Err(anyhow::anyhow!("Not recording"));
     }
     let tx = STOP_TX.lock().unwrap().take();
     if let Some(tx) = tx {
         let _ = tx.send(()).await;
     }
-    IS_RECORDING.store(false, Ordering::Relaxed);
+    IS_RECORDING.store(false, Ordering::Release);
     Ok("Capture stopped".to_string())
 }
 
@@ -214,7 +218,7 @@ fn run_mic_capture(
     let _ = app.emit("mic-started", json!({ "device": device_name }));
 
     // Keep thread alive while recording
-    while IS_RECORDING.load(Ordering::Relaxed) {
+    while IS_RECORDING.load(Ordering::Acquire) {
         std::thread::sleep(std::time::Duration::from_millis(50));
     }
 
@@ -336,7 +340,7 @@ async fn run_system_audio_capture(
     log::info!("ScreenCaptureKit system audio capture started ({}Hz {}ch)", sck_sample_rate, sck_channels);
 
     // Keep alive while recording
-    while IS_RECORDING.load(Ordering::Relaxed) {
+    while IS_RECORDING.load(Ordering::Acquire) {
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
 
@@ -434,7 +438,12 @@ async fn run_websocket(
         .header("Sec-WebSocket-Key", tokio_tungstenite::tungstenite::handshake::client::generate_key())
         .body(())?;
 
-    let (ws_stream, _) = connect_async(request).await?;
+    // P0 fix: 10s connection timeout prevents indefinite hang if proxy is unreachable
+    let (ws_stream, _) = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        connect_async(request),
+    ).await
+        .map_err(|_| anyhow::anyhow!("WebSocket connection timeout (10s) — STT proxy unreachable"))??;
     let (mut ws_tx, mut ws_rx) = ws_stream.split();
 
     log::info!("STT proxy connected (provider: {}, language: {}, rate: {}Hz)", provider, language, TARGET_SAMPLE_RATE);

@@ -24,27 +24,35 @@ class KimiProvider implements AIProvider {
   }
 
   async analyze(prompt: string, maxTokens = 1024): Promise<string> {
-    const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.1,
-      }),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000) // P0: 30s timeout
 
-    if (!response.ok) {
-      const err = await response.text()
-      throw new Error(`Kimi API error ${response.status}: ${err}`)
+    try {
+      const response = await fetch("https://api.moonshot.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const err = await response.text()
+        throw new Error(`Kimi API error ${response.status}: ${err}`)
+      }
+
+      const data = await response.json()
+      return data.choices[0].message.content
+    } finally {
+      clearTimeout(timeout)
     }
-
-    const data = await response.json()
-    return data.choices[0].message.content
   }
 }
 
@@ -57,27 +65,35 @@ class CerebrasProvider implements AIProvider {
   }
 
   async analyze(prompt: string, maxTokens = 1024): Promise<string> {
-    const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: maxTokens,
-        temperature: 0.1,
-      }),
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000) // P0: 30s timeout
 
-    if (!response.ok) {
-      const err = await response.text()
-      throw new Error(`Cerebras API error ${response.status}: ${err}`)
+    try {
+      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b",
+          messages: [{ role: "user", content: prompt }],
+          max_tokens: maxTokens,
+          temperature: 0.1,
+        }),
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const err = await response.text()
+        throw new Error(`Cerebras API error ${response.status}: ${err}`)
+      }
+
+      const data = await response.json()
+      return data.choices[0].message.content
+    } finally {
+      clearTimeout(timeout)
     }
-
-    const data = await response.json()
-    return data.choices[0].message.content
   }
 }
 
@@ -145,11 +161,32 @@ Deno.serve(async (req) => {
       })
     }
 
+    // P0: Idempotency — hash chunk to detect duplicates
+    const chunkFingerprint = `${interviewId}:${chunk.speaker || ""}:${chunk.text || ""}:${chunk.timestamp || ""}`
+    const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(chunkFingerprint))
+    const chunkHash = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("")
+
     // Init Supabase client (service role — bypasses RLS)
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     )
+
+    // P0: Check for duplicate chunk (idempotency guard)
+    const { data: existingChunk } = await supabase
+      .from("transcripts")
+      .select("id")
+      .eq("interview_id", interviewId)
+      .eq("chunk_hash", chunkHash)
+      .limit(1)
+      .single()
+
+    if (existingChunk) {
+      return new Response(
+        JSON.stringify({ ok: true, duplicate: true, message: "Chunk already processed" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      )
+    }
 
     // 1. Get interview metadata
     const { data: interview, error: intErr } = await supabase
@@ -220,6 +257,7 @@ ${dims.length ? `\nEvaluation dimensions: ${dims.map((d: any) => `${d.label} (we
       speaker_role: speakerRole,
       confidence: chunk.confidence ? Math.round(chunk.confidence * 100) : null,
       timestamp: chunk.timestamp || new Date().toISOString(),
+      chunk_hash: chunkHash,
     })
 
     // 5. Get last insight (previous analysis state) for differential analysis
