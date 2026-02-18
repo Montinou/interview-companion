@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ClipboardList, Mic, Sparkles, TrendingUp, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { db } from '@/lib/db';
 import { interviews, aiInsights } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import { getOrgContext, AuthError } from '@/lib/auth';
 
 export default async function DashboardPage() {
@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const [todayStats] = await db
       .select({ count: sql<number>`count(*)` })
       .from(interviews)
-      .where(sql`${interviews.orgId} = ${orgId} AND ${interviews.status} = 'completed'`);
+      .where(and(eq(interviews.orgId, orgId), eq(interviews.status, 'completed')));
     const completedToday = Number(todayStats.count);
 
     // AI insights count (org-scoped via join)

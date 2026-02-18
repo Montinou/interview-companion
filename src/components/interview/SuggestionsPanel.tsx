@@ -3,9 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lightbulb, Check, Sparkles, TrendingUp, Search } from 'lucide-react';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 interface Suggestion {
   id: number;
+  type: string;
   content: string;
   suggestion: string | null;
   topic: string | null;
@@ -20,8 +22,6 @@ interface SuggestionsPanelProps {
 
 // Topics that should show in Suggestions panel (questions to ask)
 const QUESTION_TOPICS = ['recommended-question', 'recommended_question'];
-// Topics that should go to Insights panel instead
-const INSIGHT_TOPICS = ['topic-change', 'topic_change', 'missing-angle', 'missing_angle'];
 
 const TOPIC_LABELS: Record<string, { label: string; icon: string; color: string }> = {
   'recommended-question': { label: 'Pregunta recomendada', icon: '❓', color: 'bg-indigo-500/15 text-indigo-300' },
@@ -134,12 +134,39 @@ export function SuggestionsPanel({ interviewId, isLive }: SuggestionsPanelProps)
     }
   };
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchSuggestions();
-    if (!isLive) return;
-    const pollInterval = setInterval(fetchSuggestions, 5000);
-    return () => clearInterval(pollInterval);
-  }, [interviewId, isLive, fetchSuggestions]);
+  }, [fetchSuggestions]);
+
+  // Realtime subscription for new suggestions (INSERT)
+  useSupabaseRealtime<Suggestion>({
+    table: 'ai_insights',
+    filter: `interview_id=eq.${interviewId}`,
+    event: 'INSERT',
+    enabled: isLive,
+    onInsert: (newInsight) => {
+      // Only add if type is 'suggestion'
+      if (newInsight.type === 'suggestion') {
+        setAllSuggestions(prev => [...prev, newInsight as Suggestion]);
+      }
+    },
+  });
+
+  // Realtime subscription for updates (for 'used' flag toggle)
+  useSupabaseRealtime<Suggestion>({
+    table: 'ai_insights',
+    filter: `interview_id=eq.${interviewId}`,
+    event: 'UPDATE',
+    enabled: isLive,
+    onUpdate: (updatedInsight) => {
+      if (updatedInsight.type === 'suggestion') {
+        setAllSuggestions(prev =>
+          prev.map(s => (s.id === updatedInsight.id ? updatedInsight as Suggestion : s))
+        );
+      }
+    },
+  });
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('es-AR', {

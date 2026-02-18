@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Send, Loader2, MessageSquare } from 'lucide-react';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 interface NotesPanelProps {
   interviewId: number;
@@ -22,37 +23,41 @@ export function NotesPanel({ interviewId }: NotesPanelProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const lastAiResponseId = useRef(0);
 
-  // Poll for AI responses from the Mac-side note-responder
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const res = await fetch(`/api/interview-data?id=${interviewId}&type=insights&filter=ai-response`);
-        if (res.ok) {
-          const responses = await res.json();
-          if (Array.isArray(responses) && responses.length > 0) {
-            const newResponses = responses.filter((r: any) => r.id > lastAiResponseId.current);
-            if (newResponses.length > 0) {
-              lastAiResponseId.current = Math.max(...newResponses.map((r: any) => r.id));
-              // Add AI responses to notes
-              for (const r of newResponses) {
-                setNotes(prev => {
-                  // Find a loading note to attach to, or add standalone
-                  const loadingIdx = prev.findIndex(n => n.loading);
-                  if (loadingIdx >= 0) {
-                    return prev.map((n, i) => i === loadingIdx ? { ...n, loading: false, aiResponse: r.content } : n);
-                  }
-                  return [...prev, { id: `ai-${r.id}`, text: '', timestamp: new Date(r.timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), aiResponse: r.content }];
-                });
-              }
-              setTimeout(() => listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 100);
-            }
+  // Realtime subscription for AI responses
+  useSupabaseRealtime<{ id: number; content: string; timestamp: string; type: string }>({
+    table: 'ai_insights',
+    filter: `interview_id=eq.${interviewId}`,
+    event: 'INSERT',
+    enabled: true,
+    onInsert: (newInsight) => {
+      // Only handle AI response insights
+      if (newInsight.type === 'ai-response' && newInsight.id > lastAiResponseId.current) {
+        lastAiResponseId.current = newInsight.id;
+        setNotes(prev => {
+          // Find a loading note to attach to, or add standalone
+          const loadingIdx = prev.findIndex(n => n.loading);
+          if (loadingIdx >= 0) {
+            return prev.map((n, i) => 
+              i === loadingIdx ? { ...n, loading: false, aiResponse: newInsight.content } : n
+            );
           }
-        }
-      } catch { /* ignore poll errors */ }
-    };
-    const iv = setInterval(poll, 2000);
-    return () => clearInterval(iv);
-  }, [interviewId]);
+          return [...prev, { 
+            id: `ai-${newInsight.id}`, 
+            text: '', 
+            timestamp: new Date(newInsight.timestamp).toLocaleTimeString('es-AR', { 
+              hour: '2-digit', 
+              minute: '2-digit' 
+            }), 
+            aiResponse: newInsight.content 
+          }];
+        });
+        setTimeout(() => 
+          listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' }), 
+          100
+        );
+      }
+    },
+  });
 
   const sendNote = useCallback(async () => {
     const text = input.trim();

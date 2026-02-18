@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Lightbulb, FileText, Clock } from 'lucide-react';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 interface Insight {
   id: number;
@@ -79,12 +80,24 @@ export function InsightsTimeline({ interviewId, isLive }: InsightsTimelineProps)
     }
   }, [interviewId, filter]);
 
+  // Initial fetch on mount
   useEffect(() => {
     fetchInsights();
-    if (!isLive) return;
-    const pollInterval = setInterval(fetchInsights, 5000);
-    return () => clearInterval(pollInterval);
-  }, [interviewId, isLive, fetchInsights]);
+  }, [fetchInsights]);
+
+  // Realtime subscription for live updates (INSERT only, filter out suggestions client-side)
+  useSupabaseRealtime<Insight>({
+    table: 'ai_insights',
+    filter: `interview_id=eq.${interviewId}`,
+    event: 'INSERT',
+    enabled: isLive,
+    onInsert: (newInsight) => {
+      // Filter out suggestions (they go to SuggestionsPanel)
+      if (newInsight.type !== 'suggestion') {
+        setInsights(prev => [...prev, newInsight]);
+      }
+    },
+  });
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString('es-AR', {

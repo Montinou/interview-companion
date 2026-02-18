@@ -51,8 +51,15 @@ export async function GET(request: NextRequest) {
   const interviewId = parseInt(searchParams.get('id') || '0');
   const type = searchParams.get('type') || '';
 
-  if (!interviewId) {
-    return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
+  // Validate interviewId is a valid integer
+  if (!interviewId || isNaN(interviewId) || interviewId <= 0) {
+    return NextResponse.json({ error: 'Invalid id parameter' }, { status: 400 });
+  }
+
+  // Validate type against allowed list
+  const allowedTypes = ['transcript', 'insights', 'scorecard', 'notes', 'questions', 'plan', 'stats'];
+  if (!allowedTypes.includes(type)) {
+    return NextResponse.json({ error: 'Invalid type. Use: transcript, insights, stats, scorecard, plan' }, { status: 400 });
   }
 
   try {
@@ -205,8 +212,9 @@ export async function POST(request: NextRequest) {
 
   const interviewId = parseInt(searchParams.get('id') || '0');
 
-  if (!interviewId) {
-    return NextResponse.json({ error: 'Missing id parameter' }, { status: 400 });
+  // Validate interviewId is a valid integer
+  if (!interviewId || isNaN(interviewId) || interviewId <= 0) {
+    return NextResponse.json({ error: 'Invalid id parameter' }, { status: 400 });
   }
 
   try {
@@ -246,6 +254,12 @@ export async function POST(request: NextRequest) {
         const { type: insightType, content, severity, suggestion, topic, responseQuality } = body;
         if (!insightType || !content) {
           return NextResponse.json({ error: 'Missing type or content' }, { status: 400 });
+        }
+
+        // Validate insightType
+        const allowedInsightTypes = ['red-flag', 'green-flag', 'suggestion', 'note', 'ai-response', 'contradiction', 'fact-check'];
+        if (!allowedInsightTypes.includes(insightType)) {
+          return NextResponse.json({ error: 'Invalid insight type' }, { status: 400 });
         }
 
         const [insight] = await db.insert(aiInsights).values({
@@ -318,11 +332,15 @@ export async function POST(request: NextRequest) {
 
       case 'question-asked': {
         const { questionId } = body;
-        if (!questionId) {
-          return NextResponse.json({ error: 'Missing questionId' }, { status: 400 });
+        const parsedQuestionId = parseInt(questionId);
+        
+        // Validate questionId is a valid integer
+        if (!parsedQuestionId || isNaN(parsedQuestionId) || parsedQuestionId <= 0) {
+          return NextResponse.json({ error: 'Invalid questionId' }, { status: 400 });
         }
+        
         const rawSql2 = postgres(process.env.DATABASE_URL!, { prepare: false });
-        await rawSql2`UPDATE interview_questions SET asked = true WHERE id = ${questionId}`;
+        await rawSql2`UPDATE interview_questions SET asked = true WHERE id = ${parsedQuestionId}`;
         return NextResponse.json({ success: true });
       }
 

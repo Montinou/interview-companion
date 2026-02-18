@@ -163,26 +163,41 @@ export async function POST(req: NextRequest) {
     const systemPrompt = SYSTEM_PROMPTS[step as keyof typeof SYSTEM_PROMPTS]?.(profileDraft) || SYSTEM_PROMPTS[0](profileDraft);
 
     // Call Moonshot API
-    const response = await fetch('https://api.moonshot.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'kimi-k2-turbo-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message },
-        ],
-        temperature: 0.7,
-        response_format: { type: 'json_object' },
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let response;
+    try {
+      response = await fetch('https://api.moonshot.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.MOONSHOT_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'kimi-k2-turbo-preview',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message },
+          ],
+          temperature: 0.7,
+          response_format: { type: 'json_object' },
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timeout);
+      if ((error as Error).name === 'AbortError') {
+        return NextResponse.json({ error: 'Request timeout' }, { status: 504 });
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('Moonshot API error:', error);
+      console.error('Moonshot API error:', response.status, error.substring(0, 200));
       return NextResponse.json({ error: 'AI service error' }, { status: 500 });
     }
 
@@ -202,7 +217,7 @@ export async function POST(req: NextRequest) {
     if (error instanceof AuthError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    console.error('Profile chat error:', error);
+    console.error('Profile chat error:', error instanceof Error ? error.message : 'Unknown');
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

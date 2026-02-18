@@ -42,7 +42,7 @@ export async function GET() {
       },
     }, { headers: corsHeaders });
   } catch (error) {
-    console.error('Extension config error:', error);
+    console.error('Extension config error:', error instanceof Error ? error.message : 'Unknown');
     return NextResponse.json(
       { error: 'Internal error' },
       { status: 500, headers: corsHeaders }

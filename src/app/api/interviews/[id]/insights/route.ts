@@ -74,10 +74,13 @@ export async function GET(
     const { id } = await params;
     const interviewId = parseInt(id);
 
+    let orgIdFilter: string | null = null;
+
     // Verify org ownership for Clerk sessions
     if (!validateApiKey(request)) {
       try {
         const { orgId } = await getOrgContext();
+        orgIdFilter = orgId;
         const interview = await db.query.interviews.findFirst({
           where: and(eq(interviews.id, interviewId), eq(interviews.orgId, orgId)),
         });
@@ -93,10 +96,21 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const typeFilter = searchParams.get('type');
 
-    const insights = await db.query.aiInsights.findMany({
-      where: typeFilter
+    // Build where clause with orgId filter for Clerk sessions
+    let whereClause;
+    if (orgIdFilter) {
+      whereClause = typeFilter
+        ? and(eq(aiInsights.interviewId, interviewId), eq(aiInsights.orgId, orgIdFilter), eq(aiInsights.type, typeFilter))
+        : and(eq(aiInsights.interviewId, interviewId), eq(aiInsights.orgId, orgIdFilter));
+    } else {
+      // API key auth - no orgId filter needed
+      whereClause = typeFilter
         ? and(eq(aiInsights.interviewId, interviewId), eq(aiInsights.type, typeFilter))
-        : eq(aiInsights.interviewId, interviewId),
+        : eq(aiInsights.interviewId, interviewId);
+    }
+
+    const insights = await db.query.aiInsights.findMany({
+      where: whereClause,
       orderBy: [desc(aiInsights.timestamp)],
     });
 

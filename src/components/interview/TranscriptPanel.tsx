@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, User, Mic, X } from 'lucide-react';
+import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 
 interface TranscriptEntry {
   id: number;
@@ -52,17 +53,23 @@ export function TranscriptPanel({ interviewId, isLive, isOpen, onClose }: Transc
     }
   }, [interviewId]);
 
+  // Initial fetch when panel opens
   useEffect(() => {
     if (!isOpen) return;
-    
     fetchTranscript();
+  }, [isOpen, fetchTranscript]);
 
-    if (!isLive) return;
-
-    // Poll for new transcript entries
-    const interval = setInterval(fetchTranscript, 3000);
-    return () => clearInterval(interval);
-  }, [interviewId, isLive, isOpen, fetchTranscript]);
+  // Realtime subscription for new transcript entries (only when live AND open)
+  useSupabaseRealtime<TranscriptEntry>({
+    table: 'transcripts',
+    filter: `interview_id=eq.${interviewId}`,
+    event: 'INSERT',
+    enabled: isLive && isOpen,
+    onInsert: (newEntry) => {
+      setTranscript(prev => [...prev, newEntry]);
+      lastIdRef.current = newEntry.id;
+    },
+  });
 
   // Auto-scroll to bottom when new entries arrive
   useEffect(() => {

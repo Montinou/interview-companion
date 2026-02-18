@@ -1,13 +1,16 @@
-import { currentUser } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { createInterview } from '@/app/actions/interviews';
 import Link from 'next/link';
+import { getOrgContext, AuthError } from '@/lib/auth';
 
 export default async function NewInterviewPage() {
-  const user = await currentUser();
-  
-  if (!user) {
-    redirect('/sign-in');
+  try {
+    await getOrgContext();
+  } catch (error) {
+    if (error instanceof AuthError) {
+      redirect('/sign-in');
+    }
+    throw error;
   }
 
   return (

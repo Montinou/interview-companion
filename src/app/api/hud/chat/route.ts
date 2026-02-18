@@ -96,21 +96,36 @@ ${insightsContext}
       return NextResponse.json({ error: 'MOONSHOT_API_KEY not configured' }, { status: 500 });
     }
 
-    const response = await fetch('https://api.moonshot.ai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${moonshot_key}`,
-      },
-      body: JSON.stringify({
-        model: 'kimi-k2-turbo-preview',
-        stream: true,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ]
-      })
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
+    let response;
+    try {
+      response = await fetch('https://api.moonshot.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${moonshot_key}`,
+        },
+        body: JSON.stringify({
+          model: 'kimi-k2-turbo-preview',
+          stream: true,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
+          ]
+        }),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      clearTimeout(timeout);
+      if ((error as Error).name === 'AbortError') {
+        return NextResponse.json({ error: 'Request timeout' }, { status: 504 });
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeout);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
