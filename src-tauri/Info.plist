@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Interview Companion needs microphone access to capture audio during interviews for real-time transcription and analysis.</string>
+    <key>NSScreenCaptureUsageDescription</key>
+    <string>Interview Companion needs screen recording permission to capture system audio during interviews. No screen content is recorded — only audio.</string>
+</dict>
+</plist>

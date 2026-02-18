@@ -22,8 +22,9 @@ tauri = { version = "2.10.0", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-updater = "2"
 
-# Audio capture
+# Audio capture — mic via cpal, system audio via ScreenCaptureKit
 cpal = "0.15"
+screencapturekit = { version = "1", features = ["async"] }
 
 # Async runtime for WebSocket
 tokio = { version = "1", features = ["full"] }

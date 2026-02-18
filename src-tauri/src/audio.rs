@@ -9,11 +9,18 @@ use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
+#[cfg(target_os = "macos")]
+use screencapturekit::prelude::*;
+
 static IS_RECORDING: AtomicBool = AtomicBool::new(false);
 
 lazy_static::lazy_static! {
     static ref STOP_TX: Mutex<Option<mpsc::Sender<()>>> = Mutex::new(None);
 }
+
+/// Target sample rate for Deepgram (16kHz mono PCM16)
+const TARGET_SAMPLE_RATE: u32 = 16000;
+const TARGET_CHANNELS: u16 = 1;
 
 pub fn get_status() -> serde_json::Value {
     json!({ "isRecording": IS_RECORDING.load(Ordering::Relaxed) })
@@ -44,9 +51,7 @@ pub async fn start_capture(
         return Err(anyhow::anyhow!("Already recording"));
     }
 
-    // Auth token (Clerk JWT) for the STT proxy
     let auth_token = config["authToken"].as_str().unwrap_or("").to_string();
-    // STT proxy URL (Cloudflare Worker)
     let proxy_url = config["sttProxyUrl"].as_str()
         .unwrap_or("https://interview-stt-proxy.agusmontoya.workers.dev")
         .to_string();
@@ -62,36 +67,81 @@ pub async fn start_capture(
 
     IS_RECORDING.store(true, Ordering::Relaxed);
 
-    // Audio capture channel — audio thread sends bytes here
-    let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>(100);
+    // Mixed audio channel — both mic and system audio send PCM16 mono 16kHz here
+    let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>(200);
 
-    // Spawn audio capture on a dedicated OS thread (cpal::Stream is !Send)
-    let app_clone = app.clone();
-    std::thread::spawn(move || {
-        if let Err(e) = run_audio_thread(audio_tx, &app_clone) {
-            log::error!("Audio thread error: {}", e);
-            let _ = app_clone.emit("capture-error", json!({ "error": e.to_string() }));
-            IS_RECORDING.store(false, Ordering::Relaxed);
-        }
-    });
+    // === Audio capture strategy ===
+    // macOS: ScreenCaptureKit captures BOTH system audio + mic (macOS 14+)
+    // Other: cpal captures mic only (no system audio)
+    
+    #[cfg(target_os = "macos")]
+    {
+        let sck_tx = audio_tx.clone();
+        let app_sck = app.clone();
+        // Try ScreenCaptureKit first (captures mic + system audio together)
+        tokio::spawn(async move {
+            match run_system_audio_capture(sck_tx.clone(), &app_sck).await {
+                Ok(()) => {
+                    log::info!("ScreenCaptureKit capture ended normally");
+                }
+                Err(e) => {
+                    log::error!("ScreenCaptureKit failed: {} — falling back to mic-only via cpal", e);
+                    let _ = app_sck.emit("capture-warning", json!({ 
+                        "message": format!("System audio unavailable ({}). Using mic only.", e),
+                        "code": "SCK_FALLBACK"
+                    }));
+                    // Fallback: mic-only via cpal on a blocking thread
+                    let mic_tx = sck_tx;
+                    let app_mic = app_sck.clone();
+                    tokio::task::spawn_blocking(move || {
+                        if let Err(e2) = run_mic_capture(mic_tx, &app_mic) {
+                            log::error!("Mic fallback also failed: {}", e2);
+                            let _ = app_mic.emit("capture-error", json!({ "error": format!("Mic: {}", e2) }));
+                        }
+                    }).await.ok();
+                }
+            }
+        });
+    }
 
-    // Spawn WebSocket + analysis on tokio
-    let app_clone2 = app.clone();
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Non-macOS: mic only via cpal
+        let mic_tx = audio_tx.clone();
+        let app_mic = app.clone();
+        std::thread::spawn(move || {
+            if let Err(e) = run_mic_capture(mic_tx, &app_mic) {
+                log::error!("Mic capture error: {}", e);
+                let _ = app_mic.emit("capture-error", json!({ "error": format!("Mic: {}", e) }));
+            }
+        });
+        let _ = app.emit("capture-warning", json!({ 
+            "message": "System audio capture not available — using microphone only" 
+        }));
+    }
+
+    let _ = app.emit("capture-started", json!({ 
+        "mic": true, 
+        "systemAudio": cfg!(target_os = "macos") 
+    }));
+
+    // === WebSocket + analysis on tokio ===
+    let app_ws = app.clone();
     tokio::spawn(async move {
         if let Err(e) = run_websocket(
             audio_rx, stop_rx, &auth_token, &proxy_url,
             &language, &provider, &model,
             &supabase_url, &supabase_anon, &internal_key,
-            interview_id, &app_clone2,
+            interview_id, &app_ws,
         ).await {
             log::error!("WebSocket error: {}", e);
-            let _ = app_clone2.emit("capture-error", json!({ "error": e.to_string() }));
+            let _ = app_ws.emit("capture-error", json!({ "error": e.to_string() }));
         }
         IS_RECORDING.store(false, Ordering::Relaxed);
-        let _ = app_clone2.emit("capture-stopped", json!({}));
+        let _ = app_ws.emit("capture-stopped", json!({}));
     });
 
-    Ok("Capture started".to_string())
+    Ok("Capture started (mic + system audio)".to_string())
 }
 
 pub async fn stop_capture(_app: tauri::AppHandle) -> Result<String, anyhow::Error> {
@@ -106,66 +156,253 @@ pub async fn stop_capture(_app: tauri::AppHandle) -> Result<String, anyhow::Erro
     Ok("Capture stopped".to_string())
 }
 
-/// Runs on a dedicated OS thread — captures audio via cpal and sends PCM bytes
-fn run_audio_thread(
+// ============================================================================
+// Microphone capture via cpal
+// ============================================================================
+
+fn run_mic_capture(
     audio_tx: mpsc::Sender<Vec<u8>>,
     app: &tauri::AppHandle,
 ) -> Result<(), anyhow::Error> {
     let host = cpal::default_host();
     let device = host.default_input_device()
-        .ok_or_else(|| anyhow::anyhow!("No input device"))?;
+        .ok_or_else(|| anyhow::anyhow!("No input device found"))?;
 
     let device_name = device.name()?;
-    log::info!("Audio device: {}", device_name);
-    let _ = app.emit("capture-started", json!({ "device": device_name }));
+    log::info!("Mic device: {}", device_name);
 
-    let config = device.default_input_config()?;
-    log::info!("Audio: {}Hz {}ch {:?}", config.sample_rate().0, config.channels(), config.sample_format());
+    let supported_config = device.default_input_config()?;
+    let source_rate = supported_config.sample_rate().0;
+    let source_channels = supported_config.channels();
+    log::info!("Mic config: {}Hz {}ch {:?}", source_rate, source_channels, supported_config.sample_format());
 
-    let stream = match config.sample_format() {
+    let stream = match supported_config.sample_format() {
         SampleFormat::I16 => {
             let tx = audio_tx.clone();
             device.build_input_stream(
-                &config.into(),
+                &supported_config.into(),
                 move |data: &[i16], _: &cpal::InputCallbackInfo| {
-                    let bytes: Vec<u8> = data.iter().flat_map(|s| s.to_le_bytes()).collect();
+                    let resampled = resample_to_16k_mono_i16(data, source_rate, source_channels);
+                    let bytes: Vec<u8> = resampled.iter().flat_map(|s| s.to_le_bytes()).collect();
                     let _ = tx.try_send(bytes);
                 },
-                |err| log::error!("Audio error: {}", err),
+                |err| log::error!("Mic stream error: {}", err),
                 None,
             )?
         }
         SampleFormat::F32 => {
             let tx = audio_tx.clone();
             device.build_input_stream(
-                &config.into(),
+                &supported_config.into(),
                 move |data: &[f32], _: &cpal::InputCallbackInfo| {
-                    let bytes: Vec<u8> = data.iter()
-                        .map(|s| (*s * 32767.0) as i16)
-                        .flat_map(|s| s.to_le_bytes())
+                    // Convert f32 to i16 first
+                    let i16_data: Vec<i16> = data.iter()
+                        .map(|s| (*s * 32767.0).clamp(-32768.0, 32767.0) as i16)
                         .collect();
+                    let resampled = resample_to_16k_mono_i16(&i16_data, source_rate, source_channels);
+                    let bytes: Vec<u8> = resampled.iter().flat_map(|s| s.to_le_bytes()).collect();
                     let _ = tx.try_send(bytes);
                 },
-                |err| log::error!("Audio error: {}", err),
+                |err| log::error!("Mic stream error: {}", err),
                 None,
             )?
         }
-        fmt => return Err(anyhow::anyhow!("Unsupported format: {:?}", fmt)),
+        fmt => return Err(anyhow::anyhow!("Unsupported mic sample format: {:?}", fmt)),
     };
 
     stream.play()?;
+    let _ = app.emit("mic-started", json!({ "device": device_name }));
 
     // Keep thread alive while recording
     while IS_RECORDING.load(Ordering::Relaxed) {
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
 
     drop(stream);
-    log::info!("Audio thread stopped");
     Ok(())
 }
 
-/// Runs on tokio — connects to STT proxy (Cloudflare Worker), forwards audio, dispatches transcripts
+// ============================================================================
+// System audio capture via ScreenCaptureKit (macOS 12.3+)
+// ============================================================================
+
+#[cfg(target_os = "macos")]
+struct SystemAudioHandler {
+    audio_tx: mpsc::Sender<Vec<u8>>,
+    source_rate: u32,
+    source_channels: u16,
+}
+
+#[cfg(target_os = "macos")]
+impl SCStreamOutputTrait for SystemAudioHandler {
+    fn did_output_sample_buffer(&self, sample: CMSampleBuffer, output_type: SCStreamOutputType) {
+        if output_type != SCStreamOutputType::Audio {
+            return;
+        }
+
+        // Extract raw audio bytes from CMSampleBuffer
+        if let Some(audio_data) = sample.audio_buffer_list() {
+            let num = audio_data.num_buffers();
+            for i in 0..num {
+                if let Some(buf_ref) = audio_data.buffer(i) {
+                    let raw_bytes: &[u8] = buf_ref.data();
+                    if raw_bytes.is_empty() {
+                        continue;
+                    }
+
+                    // ScreenCaptureKit delivers Float32 interleaved PCM
+                    let f32_samples: Vec<f32> = raw_bytes
+                        .chunks_exact(4)
+                        .map(|chunk| f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+                        .collect();
+
+                    // Convert to i16
+                    let i16_samples: Vec<i16> = f32_samples
+                        .iter()
+                        .map(|s| (*s * 32767.0).clamp(-32768.0, 32767.0) as i16)
+                        .collect();
+
+                    // Resample to 16kHz mono
+                    let resampled = resample_to_16k_mono_i16(
+                        &i16_samples,
+                        self.source_rate,
+                        self.source_channels,
+                    );
+
+                    let bytes: Vec<u8> = resampled.iter().flat_map(|s| s.to_le_bytes()).collect();
+                    let _ = self.audio_tx.try_send(bytes);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_os = "macos")]
+async fn run_system_audio_capture(
+    audio_tx: mpsc::Sender<Vec<u8>>,
+    app: &tauri::AppHandle,
+) -> Result<(), anyhow::Error> {
+    use screencapturekit::async_api::AsyncSCShareableContent;
+
+    // Get shareable content (requires Screen Recording permission)
+    let content = AsyncSCShareableContent::get().await
+        .map_err(|e| anyhow::anyhow!("ScreenCaptureKit permission denied or unavailable: {}", e))?;
+
+    let displays = content.displays();
+    if displays.is_empty() {
+        return Err(anyhow::anyhow!("No displays found for ScreenCaptureKit"));
+    }
+    let display = &displays[0];
+
+    log::info!("ScreenCaptureKit: capturing system audio from display");
+
+    // Configure for AUDIO ONLY — no video capture (saves resources)
+    let filter = SCContentFilter::create()
+        .with_display(display)
+        .with_excluding_windows(&[])
+        .build();
+
+    let sck_sample_rate: u32 = 48000;
+    let sck_channels: u16 = 1; // mono is enough for STT
+
+    let config = SCStreamConfiguration::new()
+        // Minimal video settings (can't fully disable video in SCK)
+        .with_width(2)
+        .with_height(2)
+        .with_fps(1) // minimum fps to save resources
+        // Audio settings — capture system audio + microphone
+        .with_captures_audio(true)
+        .with_captures_microphone(true) // macOS 14+: capture mic too!
+        .with_excludes_current_process_audio(true) // exclude our own app sounds
+        .with_sample_rate(sck_sample_rate as i32)
+        .with_channel_count(sck_channels as i32);
+
+    let handler = SystemAudioHandler {
+        audio_tx,
+        source_rate: sck_sample_rate,
+        source_channels: sck_channels,
+    };
+
+    let mut stream = SCStream::new(&filter, &config);
+    stream.add_output_handler(handler, SCStreamOutputType::Audio);
+    stream.start_capture()
+        .map_err(|e| anyhow::anyhow!("Failed to start ScreenCaptureKit: {}", e))?;
+
+    let _ = app.emit("system-audio-started", json!({ 
+        "sampleRate": sck_sample_rate,
+        "channels": sck_channels 
+    }));
+
+    log::info!("ScreenCaptureKit system audio capture started ({}Hz {}ch)", sck_sample_rate, sck_channels);
+
+    // Keep alive while recording
+    while IS_RECORDING.load(Ordering::Relaxed) {
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+
+    stream.stop_capture()
+        .map_err(|e| anyhow::anyhow!("Failed to stop ScreenCaptureKit: {}", e))?;
+
+    Ok(())
+}
+
+// ============================================================================
+// Audio utilities
+// ============================================================================
+
+/// Downsample multi-channel audio to 16kHz mono PCM16
+/// Uses simple linear interpolation for resampling and channel averaging for mono
+fn resample_to_16k_mono_i16(samples: &[i16], source_rate: u32, source_channels: u16) -> Vec<i16> {
+    if samples.is_empty() {
+        return Vec::new();
+    }
+
+    let channels = source_channels as usize;
+
+    // Step 1: Mix to mono (average channels)
+    let mono: Vec<i16> = if channels == 1 {
+        samples.to_vec()
+    } else {
+        samples
+            .chunks_exact(channels)
+            .map(|frame| {
+                let sum: i32 = frame.iter().map(|&s| s as i32).sum();
+                (sum / channels as i32) as i16
+            })
+            .collect()
+    };
+
+    // Step 2: Resample if needed
+    if source_rate == TARGET_SAMPLE_RATE {
+        return mono;
+    }
+
+    let ratio = source_rate as f64 / TARGET_SAMPLE_RATE as f64;
+    let output_len = (mono.len() as f64 / ratio) as usize;
+    let mut output = Vec::with_capacity(output_len);
+
+    for i in 0..output_len {
+        let src_pos = i as f64 * ratio;
+        let idx = src_pos as usize;
+        let frac = src_pos - idx as f64;
+
+        if idx + 1 < mono.len() {
+            // Linear interpolation
+            let a = mono[idx] as f64;
+            let b = mono[idx + 1] as f64;
+            output.push((a + (b - a) * frac) as i16);
+        } else if idx < mono.len() {
+            output.push(mono[idx]);
+        }
+    }
+
+    output
+}
+
+// ============================================================================
+// WebSocket — forward mixed audio to STT proxy
+// ============================================================================
+
 async fn run_websocket(
     mut audio_rx: mpsc::Receiver<Vec<u8>>,
     mut stop_rx: mpsc::Receiver<()>,
@@ -180,11 +417,11 @@ async fn run_websocket(
     interview_id: i64,
     app: &tauri::AppHandle,
 ) -> Result<(), anyhow::Error> {
-    // Build proxy WebSocket URL
+    // Build proxy WebSocket URL — encoding=linear16&sample_rate=16000 for pre-resampled audio
     let ws_url = format!(
-        "{}/ws?provider={}&language={}&model={}&channels=1",
+        "{}/ws?provider={}&language={}&model={}&channels={}&sample_rate={}&encoding=linear16",
         proxy_url.replace("https://", "wss://").replace("http://", "ws://"),
-        provider, language, model
+        provider, language, model, TARGET_CHANNELS, TARGET_SAMPLE_RATE
     );
 
     let request = tokio_tungstenite::tungstenite::http::Request::builder()
@@ -200,9 +437,9 @@ async fn run_websocket(
     let (ws_stream, _) = connect_async(request).await?;
     let (mut ws_tx, mut ws_rx) = ws_stream.split();
 
-    log::info!("STT proxy connected (provider: {}, language: {})", provider, language);
+    log::info!("STT proxy connected (provider: {}, language: {}, rate: {}Hz)", provider, language, TARGET_SAMPLE_RATE);
 
-    // Spawn transcript reader — proxy normalizes all providers to same format
+    // Spawn transcript reader
     let supabase_url = supabase_url.to_string();
     let supabase_anon = supabase_anon.to_string();
     let internal_key = internal_key.to_string();
@@ -218,7 +455,6 @@ async fn run_websocket(
                             let transcript = data["text"].as_str().unwrap_or("");
                             if transcript.is_empty() { continue; }
 
-                            // Extract speaker from words array (Deepgram diarization)
                             let speaker = data["words"]
                                 .as_array()
                                 .and_then(|w| w.first())
@@ -235,7 +471,6 @@ async fn run_websocket(
 
                             let _ = app_clone.emit("transcript", &chunk);
 
-                            // Send to analyze-chunk Edge Function
                             let _ = client.post(format!("{}/functions/v1/analyze-chunk", supabase_url))
                                 .header("Authorization", format!("Bearer {}", supabase_anon))
                                 .header("x-internal-key", &internal_key)
@@ -257,14 +492,14 @@ async fn run_websocket(
                             log::info!("STT proxy confirmed connection: provider={}", 
                                 data["provider"].as_str().unwrap_or("?"));
                         }
-                        _ => {} // ignore interim results, metadata, etc.
+                        _ => {}
                     }
                 }
             }
         }
     });
 
-    // Main loop: forward audio to proxy → provider
+    // Main loop: forward audio to proxy
     loop {
         tokio::select! {
             Some(audio) = audio_rx.recv() => {
