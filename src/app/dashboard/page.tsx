@@ -91,7 +91,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/10">
+    <div className="bg-background">
       <div className="max-w-7xl mx-auto p-6 lg:p-8 space-y-8">
         {/* Hero Section */}
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -128,7 +128,7 @@ export default async function DashboardPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold">{feature.title}</h3>
                       {feature.badge && (
-                        <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-700 text-xs font-medium">
+                        <span className="px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 text-xs font-medium">
                           {feature.badge}
                         </span>
                       )}
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
         <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-6 space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
           <div className="flex items-center gap-3 pb-4 border-b">
             <div className="rounded-lg bg-gradient-to-br from-green-500/10 to-green-600/5 p-2.5">
-              <TrendingUp className="h-5 w-5 text-green-600" />
+              <TrendingUp className="h-5 w-5 text-green-400" />
             </div>
             <div>
               <h2 className="text-xl font-bold">Development Progress</h2>
@@ -168,10 +168,10 @@ export default async function DashboardPage() {
                 style={{ animationDelay: `${(index + 4) * 50}ms` }}
                 className={`p-3 rounded-lg border animate-in fade-in slide-in-from-bottom-4 duration-500 ${
                   stage.status === 'complete'
-                    ? 'bg-green-500/10 border-green-500/20 text-green-700'
+                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
                     : stage.status === 'current'
-                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-700'
-                    : 'bg-gray-500/10 border-gray-500/20 text-gray-600'
+                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
+                    : 'bg-muted/50 border-border text-muted-foreground'
                 }`}
               >
                 <div className="flex items-center gap-2 mb-1">
@@ -190,15 +190,15 @@ export default async function DashboardPage() {
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="rounded-xl border bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500">
-            <div className="text-3xl font-bold text-blue-600 mb-1">{totalInterviews}</div>
+            <div className="text-3xl font-bold text-blue-400 mb-1">{totalInterviews}</div>
             <div className="text-sm text-muted-foreground">Total Interviews</div>
           </div>
           <div className="rounded-xl border bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-600">
-            <div className="text-3xl font-bold text-green-600 mb-1">{completedToday}</div>
+            <div className="text-3xl font-bold text-green-400 mb-1">{completedToday}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </div>
           <div className="rounded-xl border bg-gradient-to-br from-purple-500/10 to-purple-600/5 border-purple-500/20 p-6 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-700">
-            <div className="text-3xl font-bold text-purple-600 mb-1">{totalInsights}</div>
+            <div className="text-3xl font-bold text-purple-400 mb-1">{totalInsights}</div>
             <div className="text-sm text-muted-foreground">AI Insights Generated</div>
           </div>
         </div>

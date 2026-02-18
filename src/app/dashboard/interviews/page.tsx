@@ -25,7 +25,7 @@ export default async function InterviewsPage() {
     });
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="p-8">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>

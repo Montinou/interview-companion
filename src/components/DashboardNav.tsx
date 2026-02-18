@@ -19,7 +19,7 @@ export function DashboardNav() {
             elements: {
               rootBox: 'flex items-center',
               organizationSwitcherTrigger:
-                'px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm',
+                'px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-sm',
             },
           }}
         />
@@ -39,7 +39,7 @@ export function DashboardNav() {
       <div className="flex items-center gap-4">
         <a
           href="/"
-          className="px-3 py-1.5 rounded-lg border border-gray-700 bg-gray-800/50 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors text-sm"
+          className="px-3 py-1.5 rounded-lg border border-border bg-muted/50 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors text-sm"
         >
           Sign Out
         </a>

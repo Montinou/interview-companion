@@ -14,7 +14,7 @@ export default async function NewInterviewPage() {
   }
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <div className="mb-8">
           <Link

@@ -17,13 +17,13 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
-      {/* Top Navigation */}
-      <nav className="border-b border-gray-800 bg-[#111118]">
+    <div className="h-screen flex flex-col bg-background overflow-hidden">
+      {/* Top Navigation — fixed, never scrolls */}
+      <nav className="shrink-0 border-b border-border bg-card z-50">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-14">
             <div className="flex items-center gap-8">
-              <Link href="/dashboard" className="text-xl font-bold text-white">
+              <Link href="/dashboard" className="text-lg font-bold text-foreground">
                 Interview Companion
               </Link>
               <div className="flex gap-1">
@@ -33,7 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                     >
                       {Icon && <Icon className="h-4 w-4" />}
                       {item.label}
@@ -49,8 +49,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </nav>
 
-      {/* Page Content */}
-      <main>{children}</main>
+      {/* Page Content — scrolls independently */}
+      <main className="flex-1 overflow-y-auto">{children}</main>
     </div>
   );
 }

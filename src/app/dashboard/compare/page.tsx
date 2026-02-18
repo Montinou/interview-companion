@@ -84,13 +84,13 @@ export default function ComparePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Compare Candidates</h1>
+        <h1 className="text-3xl font-bold mb-6 text-foreground">Compare Candidates</h1>
 
         {/* Selection Panel */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Select Candidates to Compare</h2>
+        <div className="bg-card rounded-xl border border-border p-6 mb-6">
+          <h2 className="text-xl font-semibold mb-4 text-foreground">Select Candidates to Compare</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {interviews.map(interview => (
               <label
@@ -98,8 +98,8 @@ export default function ComparePage() {
                 className={`
                   flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all
                   ${selectedIds.includes(interview.id)
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-border hover:border-muted-foreground/30'
                   }
                 `}
               >
@@ -107,11 +107,11 @@ export default function ComparePage() {
                   type="checkbox"
                   checked={selectedIds.includes(interview.id)}
                   onChange={() => toggleInterview(interview.id)}
-                  className="w-4 h-4"
+                  className="w-4 h-4 accent-blue-500"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{interview.candidateName}</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="font-medium truncate text-foreground">{interview.candidateName}</div>
+                  <div className="text-sm text-muted-foreground">
                     {new Date(interview.createdAt).toLocaleDateString()}
                   </div>
                 </div>
@@ -120,7 +120,7 @@ export default function ComparePage() {
           </div>
 
           {interviews.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-muted-foreground">
               No completed interviews found
             </div>
           )}
@@ -130,10 +130,10 @@ export default function ComparePage() {
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
-            <div className="mt-2 text-gray-600">Loading scorecards...</div>
+            <div className="mt-2 text-muted-foreground">Loading scorecards...</div>
           </div>
         ) : selectedIds.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
+          <div className="text-center py-12 text-muted-foreground">
             Select at least one candidate to compare
           </div>
         ) : (

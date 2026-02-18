@@ -49,14 +49,14 @@ export default function ProfilesPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="text-foreground">
       <div className="max-w-7xl mx-auto p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -64,11 +64,11 @@ export default function ProfilesPage() {
               <Sparkles className="h-8 w-8 text-purple-400" />
               Interview Profiles
             </h1>
-            <p className="text-gray-400">Reusable templates for different roles</p>
+            <p className="text-muted-foreground">Reusable templates for different roles</p>
           </div>
           <Link
             href="/dashboard/profiles/new"
-            className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
           >
             <Plus className="h-5 w-5" />
             New Profile
@@ -76,15 +76,15 @@ export default function ProfilesPage() {
         </div>
 
         {profiles.length === 0 ? (
-          <div className="bg-[#111118] border border-gray-800 rounded-xl p-12 text-center">
-            <Sparkles className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2 text-gray-400">No profiles yet</h3>
-            <p className="text-gray-500 mb-6">
+          <div className="bg-card border border-border rounded-xl p-12 text-center">
+            <Sparkles className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">No profiles yet</h3>
+            <p className="text-muted-foreground/70 mb-6">
               Create your first interview profile to get started
             </p>
             <Link
               href="/dashboard/profiles/new"
-              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors"
             >
               <Plus className="h-5 w-5" />
               Create Profile
@@ -95,19 +95,19 @@ export default function ProfilesPage() {
             {profiles.map((profile) => (
               <div
                 key={profile.id}
-                className="bg-[#111118] border border-gray-800 rounded-xl p-6 hover:border-purple-500/50 transition-all group"
+                className="bg-card border border-border rounded-xl p-6 hover:border-purple-500/50 transition-all group"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-1">{profile.name}</h3>
+                    <h3 className="font-semibold text-lg mb-1 text-foreground">{profile.name}</h3>
                     {profile.seniority && (
-                      <p className="text-sm text-gray-400">{profile.seniority} level</p>
+                      <p className="text-sm text-muted-foreground">{profile.seniority} level</p>
                     )}
                   </div>
                   <button
                     onClick={() => deleteProfile(profile.id)}
                     disabled={deletingId === profile.id}
-                    className="text-gray-500 hover:text-red-400 transition-colors disabled:opacity-50"
+                    className="text-muted-foreground/50 hover:text-red-400 transition-colors disabled:opacity-50"
                   >
                     {deletingId === profile.id ? (
                       <Loader2 className="h-5 w-5 animate-spin" />
@@ -117,7 +117,7 @@ export default function ProfilesPage() {
                   </button>
                 </div>
 
-                <p className="text-sm text-gray-400 mb-4 line-clamp-2">{profile.description}</p>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{profile.description}</p>
 
                 <div className="space-y-2 mb-4">
                   {profile.techStack && profile.techStack.length > 0 && (
@@ -131,7 +131,7 @@ export default function ProfilesPage() {
                         </span>
                       ))}
                       {profile.techStack.length > 3 && (
-                        <span className="text-xs text-gray-500 px-2 py-0.5">
+                        <span className="text-xs text-muted-foreground px-2 py-0.5">
                           +{profile.techStack.length - 3} more
                         </span>
                       )}
@@ -139,13 +139,13 @@ export default function ProfilesPage() {
                   )}
 
                   {profile.evaluationDimensions && profile.evaluationDimensions.length > 0 && (
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-muted-foreground">
                       {profile.evaluationDimensions.length} evaluation dimensions
                     </div>
                   )}
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-800 text-xs text-gray-500">
+                <div className="flex items-center justify-between pt-4 border-t border-border text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
                     Used {profile.usageCount || 0} times
@@ -158,7 +158,7 @@ export default function ProfilesPage() {
 
                 <Link
                   href={`/dashboard/profiles/${profile.id}`}
-                  className="mt-4 w-full bg-gray-800 hover:bg-gray-700 text-center py-2 rounded-lg text-sm transition-colors block"
+                  className="mt-4 w-full bg-muted hover:bg-accent text-center py-2 rounded-lg text-sm transition-colors block text-foreground"
                 >
                   View Details
                 </Link>

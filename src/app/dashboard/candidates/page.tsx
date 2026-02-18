@@ -39,8 +39,8 @@ export default async function CandidatesPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-white">Candidatos</h1>
-          <p className="text-zinc-400 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-foreground">Candidatos</h1>
+          <p className="text-muted-foreground text-sm mt-1">
             {allCandidates.length} candidato{allCandidates.length !== 1 ? 's' : ''} en total
           </p>
         </div>
@@ -48,9 +48,9 @@ export default async function CandidatesPage() {
       </div>
 
       {allCandidates.length === 0 ? (
-        <div className="bg-zinc-800 rounded-lg p-12 text-center">
-          <p className="text-zinc-400 text-lg mb-2">No hay candidatos aún</p>
-          <p className="text-zinc-500 text-sm">
+        <div className="bg-card rounded-lg border border-border p-12 text-center">
+          <p className="text-muted-foreground text-lg mb-2">No hay candidatos aún</p>
+          <p className="text-muted-foreground/70 text-sm">
             Los candidatos se crean automáticamente al iniciar una entrevista,
             o podés subir un CV para crear uno nuevo.
           </p>
@@ -63,14 +63,14 @@ export default async function CandidatesPage() {
               <Link
                 key={c.id}
                 href={`/dashboard/candidates/${c.id}`}
-                className="bg-zinc-800 hover:bg-zinc-750 rounded-lg p-4 transition-colors block"
+                className="bg-card hover:bg-accent/50 rounded-lg border border-border p-4 transition-colors block"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-white font-medium text-lg">{c.name}</h3>
+                      <h3 className="text-foreground font-medium text-lg">{c.name}</h3>
                       {cvAnalysis?.seniority && (
-                        <span className="bg-zinc-700 text-zinc-300 text-xs px-2 py-0.5 rounded capitalize">
+                        <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded capitalize">
                           {cvAnalysis.seniority}
                         </span>
                       )}
@@ -81,19 +81,19 @@ export default async function CandidatesPage() {
                       )}
                     </div>
                     {c.email && (
-                      <p className="text-zinc-400 text-sm mt-1">{c.email}</p>
+                      <p className="text-muted-foreground text-sm mt-1">{c.email}</p>
                     )}
 
                     {/* Tech stack from CV analysis */}
                     {cvAnalysis?.tech_stack?.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-2">
                         {cvAnalysis.tech_stack.slice(0, 8).map((tech: string) => (
-                          <span key={tech} className="bg-blue-500/15 text-blue-300 text-xs px-1.5 py-0.5 rounded">
+                          <span key={tech} className="bg-blue-500/15 text-blue-400 text-xs px-1.5 py-0.5 rounded">
                             {tech}
                           </span>
                         ))}
                         {cvAnalysis.tech_stack.length > 8 && (
-                          <span className="text-zinc-500 text-xs">
+                          <span className="text-muted-foreground text-xs">
                             +{cvAnalysis.tech_stack.length - 8} más
                           </span>
                         )}
@@ -109,11 +109,11 @@ export default async function CandidatesPage() {
                   </div>
 
                   <div className="text-right text-sm">
-                    <p className="text-zinc-400">
+                    <p className="text-muted-foreground">
                       {Number(c.interviewCount)} entrevista{Number(c.interviewCount) !== 1 ? 's' : ''}
                     </p>
                     {c.lastInterviewDate && (
-                      <p className="text-zinc-500 text-xs mt-1">
+                      <p className="text-muted-foreground/70 text-xs mt-1">
                         Última: {new Date(c.lastInterviewDate).toLocaleDateString('es-AR')}
                       </p>
                     )}
