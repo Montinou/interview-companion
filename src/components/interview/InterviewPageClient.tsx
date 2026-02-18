@@ -7,6 +7,7 @@ import { InsightsTimeline } from './InsightsTimeline';
 import { StatsPanel } from './StatsPanel';
 import { TranscriptModalWrapper } from './TranscriptModalWrapper';
 import { ScorecardPanel } from './ScorecardPanel';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Link from 'next/link';
 import { ArrowLeft, Play, CheckCircle, User, Mail, Phone, FileText, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui-button';
@@ -218,32 +219,42 @@ export function InterviewPageClient({
           {/* Center Column - Main Content */}
           <div className="xl:col-span-6 space-y-6">
             {/* Stats Panel */}
-            <StatsPanel
-              interviewId={interview.id}
-              startedAt={interview.startedAt}
-              status={interview.status}
-            />
+            <ErrorBoundary name="Stats">
+              <StatsPanel
+                interviewId={interview.id}
+                startedAt={interview.startedAt}
+                status={interview.status}
+              />
+            </ErrorBoundary>
 
             {/* Insights Timeline */}
-            <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+            <ErrorBoundary name="Insights">
+              <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+            </ErrorBoundary>
 
             {/* Scorecard (visible after interview starts) */}
             {interview.status !== 'scheduled' && (
-              <ScorecardPanel interviewId={interview.id} />
+              <ErrorBoundary name="Scorecard">
+                <ScorecardPanel interviewId={interview.id} />
+              </ErrorBoundary>
             )}
           </div>
 
           {/* Right Column - Suggestions */}
           <div className="xl:col-span-3">
             <div className="sticky top-6">
-              <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+              <ErrorBoundary name="Suggestions">
+                <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
+              </ErrorBoundary>
             </div>
           </div>
         </div>
       </div>
 
       {/* Transcript Modal + Floating Button */}
-      <TranscriptModalWrapper interviewId={interview.id} isLive={isLive} />
+      <ErrorBoundary name="Transcript">
+        <TranscriptModalWrapper interviewId={interview.id} isLive={isLive} />
+      </ErrorBoundary>
     </div>
   );
 }

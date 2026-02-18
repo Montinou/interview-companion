@@ -4,6 +4,9 @@ import { auth } from '@clerk/nextjs/server';
 import { db } from '@/lib/db';
 import { users, interviews } from '@/lib/db/schema';
 import { eq, and } from 'drizzle-orm';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'hud-chat' });
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,6 +20,10 @@ export async function POST(req: NextRequest) {
     if (!clerkId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Rate limit: 10 req/min per user
+    const limited = limiter.check(clerkId);
+    if (limited) return limited;
 
     const { message, interviewId } = await req.json();
 

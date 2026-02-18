@@ -1,17 +1,11 @@
 import { currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { corsHeaders, handleCors } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'chrome-extension://*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'content-type',
-  'Access-Control-Allow-Credentials': 'true',
-};
-
 export async function OPTIONS() {
-  return new Response('ok', { headers: corsHeaders });
+  return handleCors();
 }
 
 export async function GET() {

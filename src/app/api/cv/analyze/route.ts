@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrgContext, AuthError } from '@/lib/auth';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter({ windowMs: 60_000, max: 5, name: 'cv-analyze' });
 import { getFileBuffer } from '@/lib/r2';
 import { extractText, analyzeCvWithAI, matchProfiles } from '@/lib/cv-parser';
 import { db } from '@/lib/db';
@@ -21,7 +24,12 @@ import { eq, and } from 'drizzle-orm';
  */
 export async function POST(req: NextRequest) {
   try {
-    const { orgId } = await getOrgContext();
+    const { orgId, userId } = await getOrgContext();
+
+    // Rate limit: 5 req/min per user (heavy AI operation)
+    const limited = limiter.check(String(userId));
+    if (limited) return limited;
+
     const { candidateId, roleHint } = await req.json();
 
     if (!candidateId) {

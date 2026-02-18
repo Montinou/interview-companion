@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrgContext, AuthError } from '@/lib/auth';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+const limiter = createRateLimiter({ windowMs: 60_000, max: 20, name: 'profiles-chat' });
 
 interface ChatRequest {
   message: string;
@@ -154,7 +157,11 @@ Respond in JSON:
 export async function POST(req: NextRequest) {
   try {
     // Validate org context (chat is org-scoped even though it doesn't insert directly)
-    await getOrgContext();
+    const { userId } = await getOrgContext();
+
+    // Rate limit: 20 req/min per user
+    const limited = limiter.check(String(userId));
+    if (limited) return limited;
 
     const body: ChatRequest = await req.json();
     const { message, profileDraft = {}, step = 0 } = body;

@@ -3,6 +3,10 @@ import { db } from '@/lib/db';
 import { transcripts, interviews } from '@/lib/db/schema';
 import { validateApiKey, unauthorizedResponse } from '@/lib/api-auth';
 import { eq } from 'drizzle-orm';
+import { createRateLimiter } from '@/lib/rate-limit';
+
+// M2M ingest: 60 req/min per interview (chunks arrive fast during live capture)
+const limiter = createRateLimiter({ windowMs: 60_000, max: 60, name: 'analyze-ingest' });
 
 /**
  * Transcript ingestion endpoint.
@@ -36,6 +40,10 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Rate limit per interview
+    const limited = limiter.check(String(interviewId));
+    if (limited) return limited;
 
     // Look up interview to get orgId (M2M auth, no Clerk session)
     const interview = await db.query.interviews.findFirst({
