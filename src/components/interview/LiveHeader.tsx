@@ -3,15 +3,20 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Circle, Pause, CheckCircle2 } from 'lucide-react';
+import { LanguageSwitcher } from './LanguageSwitcher';
+
+type LanguageCode = 'es' | 'en' | 'multi';
 
 interface LiveHeaderProps {
   candidateName: string;
   position?: string;
   status: string;
   startedAt: string | null;
+  language?: LanguageCode;
+  onLanguageChange?: (language: LanguageCode) => void;
 }
 
-export function LiveHeader({ candidateName, position, status, startedAt }: LiveHeaderProps) {
+export function LiveHeader({ candidateName, position, status, startedAt, language = 'es', onLanguageChange }: LiveHeaderProps) {
   const [duration, setDuration] = useState(0);
 
   useEffect(() => {
@@ -90,8 +95,15 @@ export function LiveHeader({ candidateName, position, status, startedAt }: LiveH
         </div>
       </div>
 
-      {/* Duration & Status */}
-      <div className="flex items-center gap-6">
+      {/* Duration, Language & Status */}
+      <div className="flex items-center gap-4">
+        {/* Language Switcher — always visible so you can set it before starting */}
+        <LanguageSwitcher
+          value={language}
+          onChange={onLanguageChange}
+          compact={status === 'live'}
+        />
+
         {status === 'live' && (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}

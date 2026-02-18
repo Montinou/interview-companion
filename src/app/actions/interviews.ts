@@ -87,3 +87,23 @@ export async function updateInterviewStatus(
   revalidatePath(`/dashboard/interviews/${interviewId}`);
   revalidatePath('/dashboard/interviews');
 }
+
+export async function updateInterviewLanguage(
+  interviewId: number,
+  language: string
+) {
+  const user = await currentUser();
+  
+  if (!user) {
+    throw new Error('Unauthorized');
+  }
+
+  await db.update(interviews)
+    .set({ 
+      language,
+      updatedAt: new Date(),
+    })
+    .where(eq(interviews.id, interviewId));
+
+  revalidatePath(`/dashboard/interviews/${interviewId}`);
+}
