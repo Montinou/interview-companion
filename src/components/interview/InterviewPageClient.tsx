@@ -7,6 +7,7 @@ import { InsightsTimeline } from './InsightsTimeline';
 import { StatsPanel } from './StatsPanel';
 import { TranscriptModalWrapper } from './TranscriptModalWrapper';
 import { ScorecardPanel } from './ScorecardPanel';
+import { RadarScorecard } from './RadarScorecard';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Link from 'next/link';
 import { ArrowLeft, Play, CheckCircle, User, Mail, Phone, FileText, Calendar } from 'lucide-react';
@@ -95,22 +96,17 @@ export function InterviewPageClient({
       {/* Main grid — fills remaining viewport, each column scrolls internally */}
       <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-4 px-4 lg:px-6 py-4">
 
-        {/* Left Column - Candidate Info & Actions (scroll on small screens) */}
+        {/* Left Column: Candidate → Radar Scorecard → Actions */}
         <div className="xl:col-span-3 min-h-0">
           <ScrollArea className="h-full">
             <div className="space-y-4 pr-3">
-              {/* Candidate Card */}
+              {/* Candidate Card — compact */}
               <Card className="bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-gradient-to-br from-blue-500/10 to-blue-600/5 p-2.5">
-                      <User className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                      <CardTitle className="text-base">Candidato</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        Entrevista #{interview.id}
-                      </p>
+                <CardContent className="pt-5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">{interview.candidate.name}</p>
+                      <p className="text-xs text-muted-foreground">Entrevista #{interview.id}</p>
                     </div>
                     <Badge variant={
                       interview.status === 'live' ? 'default' :
@@ -120,87 +116,51 @@ export function InterviewPageClient({
                       {interview.status}
                     </Badge>
                   </div>
-                </CardHeader>
-                <Separator />
-                <CardContent className="pt-4 space-y-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Nombre</p>
-                    <p className="font-medium">{interview.candidate.name}</p>
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                      <Mail className="h-3 w-3" />
-                      Email
+
+                  {interview.candidate.email && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Mail className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{interview.candidate.email}</span>
                     </div>
-                    <p className="text-sm font-medium break-all">
-                      {interview.candidate.email}
-                    </p>
-                  </div>
+                  )}
                   {interview.candidate.phone && (
-                    <div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <Phone className="h-3 w-3" />
-                        Teléfono
-                      </div>
-                      <p className="text-sm font-medium">
-                        {interview.candidate.phone}
-                      </p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Phone className="h-3 w-3 shrink-0" />
+                      <span>{interview.candidate.phone}</span>
                     </div>
                   )}
                   {interview.candidate.jiraTicket && (
-                    <div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <FileText className="h-3 w-3" />
-                        Jira Ticket
-                      </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <FileText className="h-3 w-3 shrink-0 text-muted-foreground" />
                       <a
                         href={`https://distillery.atlassian.net/browse/${interview.candidate.jiraTicket}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm font-mono font-medium text-blue-600 hover:underline"
+                        className="font-mono text-blue-500 hover:underline"
                       >
                         {interview.candidate.jiraTicket}
                       </a>
                     </div>
                   )}
-                  {interview.scheduledAt && (
-                    <div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-                        <Calendar className="h-3 w-3" />
-                        Agendada
-                      </div>
-                      <p className="text-sm font-medium">
-                        {new Date(interview.scheduledAt).toLocaleDateString(
-                          'es-AR',
-                          {
-                            weekday: 'long',
-                            day: 'numeric',
-                            month: 'long',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          }
-                        )}
-                      </p>
-                    </div>
-                  )}
                   {interview.profile && (
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Perfil</p>
-                      <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
-                        {interview.profile.name}
-                        {interview.profile.seniority && ` · ${interview.profile.seniority}`}
-                      </Badge>
-                    </div>
+                    <Badge variant="secondary" className="bg-purple-500/10 text-purple-400 border-purple-500/30">
+                      {interview.profile.name}
+                      {interview.profile.seniority && ` · ${interview.profile.seniority}`}
+                    </Badge>
                   )}
                 </CardContent>
               </Card>
 
+              {/* Radar Scorecard (spider chart) */}
+              {interview.status !== 'scheduled' && (
+                <ErrorBoundary name="Radar">
+                  <RadarScorecard interviewId={interview.id} isLive={isLive} />
+                </ErrorBoundary>
+              )}
+
               {/* Actions */}
               <Card className="bg-card/50 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Acciones</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="pt-5 space-y-3">
                   {interview.status === 'scheduled' && (
                     <form
                       action={() => updateStatusAction(interview.id, 'live')}
@@ -218,12 +178,7 @@ export function InterviewPageClient({
                       action={() => updateStatusAction(interview.id, 'completed')}
                       className="w-full"
                     >
-                      <Button
-                        type="submit"
-                        className="w-full"
-                        size="lg"
-                        variant="default"
-                      >
+                      <Button type="submit" className="w-full" size="lg" variant="default">
                         <CheckCircle className="h-4 w-4" />
                         Finalizar Entrevista
                       </Button>
@@ -231,17 +186,22 @@ export function InterviewPageClient({
                   )}
 
                   {interview.status === 'completed' && (
-                    <div className="text-center py-4 text-muted-foreground">
-                      <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
-                      <p className="font-medium text-green-600">
-                        Entrevista completada
-                      </p>
+                    <div className="text-center py-3">
+                      <CheckCircle className="h-6 w-6 mx-auto mb-1.5 text-green-500" />
+                      <p className="font-medium text-green-600 text-sm">Entrevista completada</p>
                       {interview.completedAt && (
-                        <p className="text-sm">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {new Date(interview.completedAt).toLocaleString('es-AR')}
                         </p>
                       )}
                     </div>
+                  )}
+
+                  {/* Scorecard edit (1-10 sliders) below actions for completed interviews */}
+                  {interview.status === 'completed' && (
+                    <ErrorBoundary name="Scorecard">
+                      <ScorecardPanel interviewId={interview.id} />
+                    </ErrorBoundary>
                   )}
                 </CardContent>
               </Card>
@@ -249,9 +209,8 @@ export function InterviewPageClient({
           </ScrollArea>
         </div>
 
-        {/* Center Column — Insights + Scorecard with internal scroll */}
+        {/* Center Column — Stats + Insights (full height for insights) */}
         <div className="xl:col-span-6 min-h-0 flex flex-col gap-4">
-          {/* Stats — compact, no scroll needed */}
           <div className="shrink-0">
             <ErrorBoundary name="Stats">
               <StatsPanel
@@ -262,25 +221,14 @@ export function InterviewPageClient({
             </ErrorBoundary>
           </div>
 
-          {/* Insights + Scorecard — share remaining space, each scrolls internally */}
-          <div className="flex-1 min-h-0 flex flex-col gap-4">
-            <div className="flex-1 min-h-0">
-              <ErrorBoundary name="Insights">
-                <InsightsTimeline interviewId={interview.id} isLive={isLive} />
-              </ErrorBoundary>
-            </div>
-
-            {interview.status !== 'scheduled' && (
-              <div className="shrink-0 max-h-[40%] overflow-y-auto rounded-lg">
-                <ErrorBoundary name="Scorecard">
-                  <ScorecardPanel interviewId={interview.id} />
-                </ErrorBoundary>
-              </div>
-            )}
+          <div className="flex-1 min-h-0">
+            <ErrorBoundary name="Insights">
+              <InsightsTimeline interviewId={interview.id} isLive={isLive} />
+            </ErrorBoundary>
           </div>
         </div>
 
-        {/* Right Column - Suggestions (scroll internal) */}
+        {/* Right Column — Suggestions (scroll internal) */}
         <div className="xl:col-span-3 min-h-0">
           <ErrorBoundary name="Suggestions">
             <SuggestionsPanel interviewId={interview.id} isLive={isLive} />
