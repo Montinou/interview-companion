@@ -7,6 +7,16 @@ import {
 } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Pencil } from 'lucide-react';
+import { ScorecardPanel } from './ScorecardPanel';
 
 const DIMS = [
   { key: 'attitude', label: 'Actitud', esKey: 'actitud' },
@@ -33,6 +43,7 @@ interface RadarScorecardProps {
 
 export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScorecardProps) {
   const [scorecard, setScorecard] = useState<Record<string, any> | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchScorecard = useCallback(async () => {
     try {
@@ -52,7 +63,13 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
     }
   }, [fetchScorecard, isLive]);
 
-  // Use provided dimensions or fall back to hardcoded DIMS
+  // Refetch when dialog closes (user may have edited scores)
+  useEffect(() => {
+    if (!editOpen) {
+      fetchScorecard();
+    }
+  }, [editOpen, fetchScorecard]);
+
   const activeDims = dimensions || DIMS;
 
   const data = activeDims.map(d => ({
@@ -64,7 +81,6 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
   const rec = scorecard?.recommendation || null;
   const hasScores = data.some(d => d.value > 0);
 
-  // Custom tick renderer to show label + score
   const renderAxisTick = ({ payload, x, y, textAnchor, fill: _fill, stroke: _stroke, ...rest }: any) => {
     const item = data.find(d => d.dim === payload.value);
     const score = item?.value || 0;
@@ -94,9 +110,25 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
   return (
     <Card className="bg-card">
       <CardContent className="p-4 space-y-2">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          📊 AI Scorecard
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            📊 AI Scorecard
+          </h3>
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground">
+                <Pencil className="h-3 w-3 mr-1" />
+                Editar
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Editar Scorecard</DialogTitle>
+              </DialogHeader>
+              <ScorecardPanel interviewId={interviewId} />
+            </DialogContent>
+          </Dialog>
+        </div>
         <div className="h-[280px]">
           {hasScores ? (
             <ResponsiveContainer width="100%" height="100%">

@@ -1,9 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { ClipboardCheck, Save, Star, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Save, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -102,44 +100,31 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
   if (!loaded) return null;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-    >
-      <Card className="bg-card/50 backdrop-blur-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-indigo-500/10 p-2.5">
-                <ClipboardCheck className="h-5 w-5 text-indigo-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold">Scorecard</h2>
-                <p className="text-sm text-muted-foreground">
-                  {filledCount}/{CATEGORIES.length} evaluados
-                  {average && ` · Promedio: ${average}/10`}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={save}
-              disabled={saving}
-              className="bg-indigo-600 hover:bg-indigo-700"
-            >
-              {saving ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : saved ? (
-                '✓ Guardado'
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Guardar
-                </>
-              )}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
+    <div className="space-y-6">
+      {/* Header with save */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {filledCount}/{CATEGORIES.length} evaluados
+          {average && ` · Promedio: ${average}/10`}
+        </p>
+        <Button
+          onClick={save}
+          disabled={saving}
+          size="sm"
+          className="bg-indigo-600 hover:bg-indigo-700"
+        >
+          {saving ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : saved ? (
+            '✓ Guardado'
+          ) : (
+            <>
+              <Save className="h-4 w-4" />
+              Guardar
+            </>
+          )}
+        </Button>
+      </div>
 
       {/* Score Categories */}
       <div className="space-y-4">
@@ -207,18 +192,16 @@ export function ScorecardPanel({ interviewId }: ScorecardPanelProps) {
             </div>
           </div>
 
-          {/* Notes */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Notas</p>
-            <Textarea
-              value={scorecard.notes || ''}
-              onChange={e => setScorecard(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Observaciones generales, contexto adicional, decisión final..."
-              className="h-32 resize-none"
-            />
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
+      {/* Notes */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Notas</p>
+        <Textarea
+          value={scorecard.notes || ''}
+          onChange={e => setScorecard(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Observaciones generales, contexto adicional, decisión final..."
+          className="h-32 resize-none"
+        />
+      </div>
+    </div>
   );
 }

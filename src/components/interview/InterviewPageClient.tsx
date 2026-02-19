@@ -6,7 +6,6 @@ import { SuggestionsPanel } from './SuggestionsPanel';
 import { InsightsTimeline } from './InsightsTimeline';
 import { StatsPanel } from './StatsPanel';
 import { TranscriptModalWrapper } from './TranscriptModalWrapper';
-import { ScorecardPanel } from './ScorecardPanel';
 import { RadarScorecard } from './RadarScorecard';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import Link from 'next/link';
@@ -197,12 +196,6 @@ export function InterviewPageClient({
                     </div>
                   )}
 
-                  {/* Scorecard edit (1-10 sliders) below actions for completed interviews */}
-                  {interview.status === 'completed' && (
-                    <ErrorBoundary name="Scorecard">
-                      <ScorecardPanel interviewId={interview.id} />
-                    </ErrorBoundary>
-                  )}
                 </CardContent>
               </Card>
             </div>
