@@ -84,23 +84,25 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
   const renderAxisTick = ({ payload, x, y, textAnchor, fill: _fill, stroke: _stroke, ...rest }: any) => {
     const item = data.find(d => d.dim === payload.value);
     const score = item?.value || 0;
+    // Abbreviate long labels for compact display
+    const label = payload.value.length > 8 ? payload.value.slice(0, 7) + '.' : payload.value;
     return (
       <g>
         <text
           x={x} y={y} textAnchor={textAnchor}
           fill="#e2e8f0"
-          fontSize={13} fontWeight={600}
+          fontSize={11} fontWeight={600}
           {...rest}
         >
-          {payload.value}
+          {label}
         </text>
         {hasScores && (
           <text
-            x={x} y={y + 15} textAnchor={textAnchor}
+            x={x} y={y + 13} textAnchor={textAnchor}
             fill={score >= 7 ? '#22c55e' : score >= 4 ? '#eab308' : '#ef4444'}
-            fontSize={14} fontWeight={700}
+            fontSize={12} fontWeight={700}
           >
-            {score}/10
+            {score}
           </text>
         )}
       </g>
@@ -108,11 +110,11 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
   };
 
   return (
-    <Card className="bg-card">
-      <CardContent className="p-4 space-y-2">
+    <Card className="bg-card overflow-hidden">
+      <CardContent className="p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-            📊 AI Scorecard
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            📊 Scorecard
           </h3>
           <Dialog open={editOpen} onOpenChange={setEditOpen}>
             <DialogTrigger asChild>
@@ -121,7 +123,7 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
                 Editar
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Editar Scorecard</DialogTitle>
               </DialogHeader>
@@ -129,10 +131,10 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
             </DialogContent>
           </Dialog>
         </div>
-        <div className="h-[280px]">
+        <div className="h-[240px] overflow-hidden">
           {hasScores ? (
             <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={data} cx="50%" cy="50%" outerRadius="50%">
+              <RadarChart data={data} cx="50%" cy="50%" outerRadius="45%">
                 <PolarGrid stroke="hsl(var(--border))" />
                 <PolarAngleAxis 
                   dataKey="dim" 
@@ -149,7 +151,7 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
                   stroke="#8b5cf6" 
                   fill="#8b5cf6" 
                   fillOpacity={0.3} 
-                  dot={{ r: 4, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} 
+                  dot={{ r: 3, fill: '#8b5cf6', stroke: '#a78bfa', strokeWidth: 1 }} 
                 />
               </RadarChart>
             </ResponsiveContainer>
@@ -159,13 +161,13 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
             </div>
           )}
         </div>
-        {/* Recommendation badges */}
-        <div className="flex gap-1">
+        {/* Recommendation badges — wrap on narrow screens */}
+        <div className="flex flex-wrap gap-1">
           {RECS.map(r => (
             <Badge
               key={r.key}
               variant={rec === r.key ? 'default' : 'outline'}
-              className={`flex-1 justify-center text-[10px] font-medium transition-all ${
+              className={`flex-1 min-w-[3.5rem] justify-center text-[10px] font-medium transition-all ${
                 rec === r.key
                   ? `${r.color} text-white ring-1 ring-white/30`
                   : 'bg-muted/40 text-muted-foreground'
@@ -176,7 +178,7 @@ export function RadarScorecard({ interviewId, isLive, dimensions }: RadarScoreca
           ))}
         </div>
         {scorecard?.justification && (
-          <p className="text-xs text-muted-foreground italic border-t border-border pt-2 mt-1">
+          <p className="text-xs text-muted-foreground italic border-t border-border pt-2 mt-1 line-clamp-3">
             {scorecard.justification}
           </p>
         )}
