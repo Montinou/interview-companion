@@ -1,5 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 type Props = {
@@ -47,6 +49,14 @@ export default function Header({ candidateName, jiraTicket, status, startTime, c
   return (
     <div className="h-10 flex items-center justify-between px-4 bg-card border-b border-border shrink-0">
       <div className="flex items-center gap-3">
+        <Link
+          href="/dashboard/interviews"
+          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Interviews
+        </Link>
+        <span className="text-muted-foreground/40">|</span>
         <span className="text-foreground font-semibold">{candidateName}</span>
         <span className="text-muted-foreground text-sm">
           · QA Automation{jiraTicket ? ` · ${jiraTicket}` : ''}
