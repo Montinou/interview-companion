@@ -145,7 +145,7 @@ export default async function InterviewDetailPage({
 
         {/* Col 2: Interview Plan */}
         <div className="min-h-0">
-          <InterviewPlan interviewId={interview.id} />
+          <InterviewPlan interviewId={interview.id} profileStructure={profile?.interviewStructure ?? null} />
         </div>
 
         {/* Col 3: Interview Guide */}

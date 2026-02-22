@@ -35,17 +35,67 @@ interface Section {
   topics: Topic[];
 }
 
-interface InterviewPlanProps {
-  interviewId: number;
+interface ProfileStructure {
+  totalDuration?: number;
+  phases?: {
+    name: string;
+    duration?: number;
+    questions?: { text: string; listenFor?: string; note?: string }[];
+  }[];
 }
 
-export function InterviewPlan({ interviewId }: InterviewPlanProps) {
-  const [sections, setSections] = useState<Section[]>([]);
-  const [expandedSection, setExpandedSection] = useState<number | null>(null);
+interface InterviewPlanProps {
+  interviewId: number;
+  profileStructure?: ProfileStructure | null;
+}
+
+/** Convert profile interviewStructure JSON → Section[] for the plan UI */
+function profileToSections(ps: ProfileStructure): Section[] {
+  return (ps.phases || []).map((phase, pi) => ({
+    id: pi + 1,
+    name: phase.name,
+    description: null,
+    duration_min: phase.duration ?? null,
+    topics: [
+      {
+        id: pi + 1,
+        name: 'Preguntas',
+        description: null,
+        priority: 'high',
+        questions: (phase.questions || []).map((q, qi) => ({
+          id: pi * 100 + qi + 1,
+          question: q.text,
+          purpose: q.note ?? null,
+          expected_signals: q.listenFor ?? null,
+          follow_ups: null,
+          asked: false,
+          answer_quality: null,
+          notes: null,
+        })),
+      },
+    ],
+  }));
+}
+
+export function InterviewPlan({ interviewId, profileStructure }: InterviewPlanProps) {
+  const [sections, setSections] = useState<Section[]>(() =>
+    profileStructure ? profileToSections(profileStructure) : []
+  );
+  const [expandedSection, setExpandedSection] = useState<number | null>(
+    profileStructure?.phases?.length ? 1 : null
+  );
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [loaded, setLoaded] = useState(!!profileStructure);
 
   useEffect(() => {
+    // If we already have profile data, no API call needed
+    if (profileStructure) {
+      const s = profileToSections(profileStructure);
+      setSections(s);
+      if (s.length > 0) setExpandedSection(s[0].id);
+      setLoaded(true);
+      return;
+    }
     if (loaded) return;
     let cancelled = false;
     (async () => {
@@ -53,10 +103,7 @@ export function InterviewPlan({ interviewId }: InterviewPlanProps) {
         const res = await fetch(`/api/interview-data?id=${interviewId}&type=plan`, {
           credentials: 'include',
         });
-        if (!res.ok) {
-          console.error('[InterviewPlan] fetch failed:', res.status, await res.text().catch(() => ''));
-          return;
-        }
+        if (!res.ok) return;
         const data = await res.json();
         if (cancelled) return;
         if (Array.isArray(data) && data.length > 0) {
@@ -67,7 +114,7 @@ export function InterviewPlan({ interviewId }: InterviewPlanProps) {
       } catch (e) { console.error('[InterviewPlan] error:', e); }
     })();
     return () => { cancelled = true; };
-  }, [interviewId, loaded]);
+  }, [interviewId, loaded, profileStructure]);
 
   const markAsked = async (questionId: number) => {
     try {
