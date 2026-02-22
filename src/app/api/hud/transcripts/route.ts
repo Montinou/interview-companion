@@ -23,6 +23,7 @@ export async function GET() {
         candidateName: interview.candidate?.name || 'Unknown',
         jiraTicket: interview.candidate?.jiraTicket || '',
         startedAt: interview.startedAt,
+        completedAt: interview.completedAt,
       },
       transcripts: entries.map(e => ({
         time: e.timestamp.toISOString().substring(11, 19),

@@ -30,6 +30,7 @@ export type Scorecard = {
 export type InterviewMeta = {
   id: number; status: string; candidateName: string;
   jiraTicket: string; startedAt: string | null;
+  completedAt: string | null;
   candidateTitle?: string;
 };
 
@@ -128,7 +129,7 @@ function HudContent() {
         const d = await tRes.json();
         setTranscripts(d.transcripts || []);
         if (d.interview) {
-          setMeta(d.interview);
+          setMeta({ ...d.interview, completedAt: d.interview.completedAt ?? null });
           setInterviewId(d.interview.id);
         }
       }
@@ -261,6 +262,7 @@ function HudContent() {
           jiraTicket={meta?.jiraTicket || ''}
           status={meta?.status || 'loading'}
           startTime={startTimestamp}
+          completedAt={meta?.completedAt ? new Date(meta.completedAt).getTime() / 1000 : null}
           transcriptCount={transcripts.length}
           insightCount={insights.length}
         />
