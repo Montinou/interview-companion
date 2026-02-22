@@ -39,16 +39,15 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
   // HUD pages get full viewport — no sidebar
   const isFullscreen = pathname.startsWith('/dashboard/live-interview') || pathname.startsWith('/dashboard/hud');
-  if (isFullscreen) {
-    return <>{children}</>;
-  }
 
+  // ⚠️ All hooks must be called unconditionally (Rules of Hooks)
   // Hydrate collapsed state from localStorage
   useEffect(() => {
+    if (isFullscreen) return;
     const stored = localStorage.getItem(COLLAPSED_KEY);
     if (stored === 'true') setCollapsed(true);
     setMounted(true);
-  }, []);
+  }, [isFullscreen]);
 
   // Persist collapsed state
   const toggleCollapsed = () => {
@@ -64,12 +63,18 @@ export function DashboardSidebar({ children }: { children: React.ReactNode }) {
 
   // Close mobile menu on Escape
   useEffect(() => {
+    if (isFullscreen) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setMobileOpen(false);
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, []);
+  }, [isFullscreen]);
+
+  // Early return after all hooks
+  if (isFullscreen) {
+    return <>{children}</>;
+  }
 
   const isActive = (item: typeof navItems[0]) => {
     if (item.exact) return pathname === item.href;
